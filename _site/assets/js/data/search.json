@@ -1,0 +1,34 @@
+[
+  
+  {
+    "title": "HTB Cyber-Apocalypse",
+    "url": "/posts/htb-cyber-apocalypse/",
+    "categories": "HTB, easy",
+    "tags": "pwn, srop, htb, easy, ctf",
+    "date": "2021-05-09 01:14:11 -0400",
+    
+
+
+
+
+
+    "snippet": "System_dROPRunning this through Ghidra we see a very straight-forward buffer overflow. We have a buffer of 32 bytes, and the program reads in 256 bytes. Additionally, the title of the challenge hints at using the SROP technique to exploit this overflow.Using vmmap in GDB we obtain more informatio..."
+  },
+  
+  {
+    "title": "HTB Delivery",
+    "url": "/posts/htb-delivery/",
+    "categories": "HTB, easy",
+    "tags": "htb, easy, linux",
+    "date": "2021-02-01 00:14:11 -0500",
+    
+
+
+
+
+
+    "snippet": "EnumerationThe initial nmap scan reveals that there are 3 ports open:22/tcp   	open  ssh     		OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)80/tcp   	open  http    		nginx 1.14.28065/tcp	open  unknownI was unsuccessful in researching what program runs on this port in my OSINT so I headed over to..."
+  }
+  
+]
+

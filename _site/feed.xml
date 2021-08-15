@@ -1,0 +1,108 @@
+
+
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>http://0.0.0.0:4000/</id>
+  <title>Kvn11</title>
+  <subtitle>A student made blog containing writeups and articles pertaining to cyber security and infosec.</subtitle>
+  <updated>2021-08-14T23:09:43-04:00</updated>
+  <author>
+    <name>kev</name>
+    <uri>http://0.0.0.0:4000/</uri>
+  </author>
+  <link rel="self" type="application/atom+xml" href="http://0.0.0.0:4000/feed.xml"/>
+  <link rel="alternate" type="text/html" hreflang="en"
+    href="http://0.0.0.0:4000/"/>
+  <generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator>
+  <rights> © 2021 kev </rights>
+  <icon>/assets/img/favicons/favicon.ico</icon>
+  <logo>/assets/img/favicons/favicon-96x96.png</logo>
+
+
+  
+  <entry>
+    <title>HTB Cyber-Apocalypse</title>
+    <link href="http://0.0.0.0:4000/posts/htb-cyber-apocalypse/" rel="alternate" type="text/html" title="HTB Cyber-Apocalypse" />
+    <published>2021-05-09T01:14:11-04:00</published>
+  
+    <updated>2021-05-09T01:14:11-04:00</updated>
+  
+    <id>http://0.0.0.0:4000/posts/htb-cyber-apocalypse/</id>
+    <content src="http://0.0.0.0:4000/posts/htb-cyber-apocalypse/" />
+    <author>
+      <name>kev</name>
+    </author>
+
+  
+    
+    <category term="HTB" />
+    
+    <category term="easy" />
+    
+  
+
+  
+    <summary>
+      
+
+
+
+
+
+      System_dROP
+
+Running this through Ghidra we see a very straight-forward buffer overflow. We have a buffer of 32 bytes, and the program reads in 256 bytes. Additionally, the title of the challenge hints at using the SROP technique to exploit this overflow.
+
+
+
+Using vmmap in GDB we obtain more information. The stack is non-executable and we can write to the addresses of 0x00601000 - 0x00602000. T...
+    </summary>
+  
+
+  </entry>
+
+  
+  <entry>
+    <title>HTB Delivery</title>
+    <link href="http://0.0.0.0:4000/posts/htb-delivery/" rel="alternate" type="text/html" title="HTB Delivery" />
+    <published>2021-02-01T00:14:11-05:00</published>
+  
+    <updated>2021-02-01T00:14:11-05:00</updated>
+  
+    <id>http://0.0.0.0:4000/posts/htb-delivery/</id>
+    <content src="http://0.0.0.0:4000/posts/htb-delivery/" />
+    <author>
+      <name>kev</name>
+    </author>
+
+  
+    
+    <category term="HTB" />
+    
+    <category term="easy" />
+    
+  
+
+  
+    <summary>
+      
+
+
+
+
+
+      Enumeration
+
+The initial nmap scan reveals that there are 3 ports open:
+22/tcp   	open  ssh     		OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)
+80/tcp   	open  http    		nginx 1.14.2
+8065/tcp	open  unknown
+
+I was unsuccessful in researching what program runs on this port in my OSINT so I headed over to the box site, http://10.10.10.222. Clicking around on the site brings us to the contact us p...
+    </summary>
+  
+
+  </entry>
+
+</feed>
+
+
