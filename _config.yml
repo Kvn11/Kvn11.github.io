@@ -18,7 +18,7 @@ timezone: America/New_York
 # jekyll-seo-tag settings › https://github.com/jekyll/jekyll-seo-tag/blob/master/docs/usage.md
 # ↓ --------------------------
 
-title: Kvn11                          # the main title
+title: kvn11                          # the main title
 
 tagline: An InfoSec focused blog.   # it will display as the sub-title
 
