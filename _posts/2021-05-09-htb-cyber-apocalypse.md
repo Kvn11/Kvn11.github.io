@@ -5,7 +5,7 @@ date:   2021-05-09 01:14:11 -0400
 categories: HTB easy
 tags: pwn srop htb easy ctf
 ---
-# System_dROP
+## System_dROP
 
 Running this through Ghidra we see a very straight-forward buffer overflow. We have a buffer of 32 bytes, and the program reads in 256 bytes. Additionally, the title of the challenge hints at using the SROP technique to exploit this overflow.
 
@@ -175,7 +175,7 @@ io.interactive()
 ```  
   
   
-# Minefield
+## Minefield
 
 Running the program through GDB shows that we have the ability to write to some addresses, and we also note that there is no memory randomization.
 There is a stack canary, so my first thought was that this was not going to be a buffer overflow.
