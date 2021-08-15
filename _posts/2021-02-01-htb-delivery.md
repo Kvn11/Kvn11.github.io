@@ -5,7 +5,7 @@ date: 2021-02-01 01:14:11 -0400
 categories: HTB easy
 tags: htb easy linux
 ---
-# Enumeration
+## Enumeration
 
 The initial nmap scan reveals that there are 3 ports open:
 ```
@@ -35,7 +35,7 @@ Now lets check out the MatterMost server. It also greets us with a log in page, 
 
 {% include image name="image5.png" %}
 
-# Getting User
+## Getting User
 
 My first thought was that since we already know of a @delivery.htb address (the one given to us after making a support ticket) then we could potentially request a password reset using that email on the MatterMost server, and then we will receive the link in the support thread, and BOOM. However, this did not work. So my next step was try to use the email account to sign up on MatterMost. 
 
@@ -66,7 +66,7 @@ c90e841382f400b84697616bb877a272
 maildeliverer@Delivery:~$
 ```
 
-# Getting Root
+## Getting Root
 
 From the message in the MatterMost channel, we can assume that we are now looking for hashes that contain the root password. I went back to the OSTicket login portal to try and obtain to clues about where to look. Fortunately, I found a lot.
 
