@@ -5,4 +5,7 @@ order: 4
 ---
 
 
-> **Note**: Add Markdown syntax content to file `_tabs/about.md` and it will show up on this page.
+I am a senior computer science and engineering student at the University of Connecticut. I will be graduating May of 2022.
+I enjoy participating in CTF's and learning about interesting exploits, and have been improving my pen-testing skills through HackTheBox.
+
+{% include htb-badge.html %}
