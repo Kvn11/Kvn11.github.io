@@ -48,7 +48,7 @@ social:
     # - https://www.facebook.com/username
     - https://www.linkedin.com/in/kevin-romero-9125b9165/
 
-google_site_verification: google_meta_tag_verification # change to your verification string
+google_site_verification: y7ppGqUEbLE-QnUBjxWeNtyJSR4Qb8yXLimNpT4L3Rs # change to your verification string
 
 # ↑ --------------------------
 
@@ -81,7 +81,7 @@ theme_mode:   # [light|dark]
 img_cdn: ''
 
 # the avatar on sidebar, support local or CORS resources
-avatar: https://cdn.jsdelivr.net/gh/cotes2020/chirpy-images/commons/avatar.jpg
+avatar: assets/resources/avatar.png
 
 # boolean type, the global switch for ToC in posts.
 toc: true
