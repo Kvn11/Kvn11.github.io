@@ -1,2 +1,11 @@
 public
 resources
+.DS_Store
+node_modules
+dist
+tmp
+hugo.exe
+hugo.linux
+hugo.darwin
+*.lock
+jsconfig.json
