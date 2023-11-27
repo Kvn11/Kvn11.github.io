@@ -8,7 +8,6 @@ tags:
     - malware
     - windows
 image: img/cover.png
-weight: 1
 ---
 
 ## Opening Thoughts
