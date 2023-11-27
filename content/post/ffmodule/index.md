@@ -216,3 +216,12 @@ If its not equal it will also exit.
 So we jump over that and continue.
 I also have intuition to continue here because I see another hashing loop later on down this path, so I'm curious to see what comes out of it.
 It turns out to be wanting `WS_32.dll`.
+
+## Endgame
+
+So I forgot to take screenshots when I solved it, and I don't feel like going through the challenge again to get them, so I'll just summarize what ended up happening.
+I set a breakpoint at the `PR_Write` function, and waiting until it was hit with data.
+Once the data was hit, the data gets encrypted.
+The encryption depends on a key generated from bytes right before the encryption routine, and the amount of bytes read from that area depend on the size of the data being encrypted.
+Regardless of the size, the first 32 bytes of the key will always be the flag.
+The key generation and encryption takes a minnnn to complete if you are stepping through with breakpoints, we can modify the call to `PR_Write` `size` parameter to 32, which will make the flag appear one byte at a time before they are used to encrypt the data.

@@ -34,12 +34,14 @@ After the last `VirtualProtect`, you can dump the original process memory and yo
 
 ![MZ says its a PE file](img/2.png) ![`.bss` with low entropy is misleading](img/3.png)
 
+## Reversing Encryption Routine
+
 At this point, I wasn't sure if this was the last stage or not, so I continue in `x32dbg` in case I ran into more `VirtualAlloc` or `HeapAlloc` but pretty soon realized this was the main module.
 The sample will use local APC injection to run some threads to decrypt the config we want and a few other tasks.
 For the sake of brevity I will skip pass that process, but if you wanted to repeat it, you could set a break point at `CreateThread`, and once you get there, change the `EIP` to point to the thread payload, which should be `0x401b7f`.
 After locating the code that was decrypting the config data in `.bss`, I was able to continue the reversing process in Binary Ninja.
 
-![Main decryption loop](img/4.png) ![Helper function to perform the calculations](img/5.png)
+![Bruteforce Loop](img/4.png) ![Decryption Function](img/5.png)
 
 The decryption process is pretty straightforward from here.
 A key is generated using `Apr ` and `26 2`, the virtual address of the `.bss` section, and some other values that are used for bruteforcing.
