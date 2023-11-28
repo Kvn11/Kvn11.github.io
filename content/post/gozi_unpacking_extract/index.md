@@ -69,6 +69,9 @@ for i in range(400):
 ## Key generation
 
 Figuring out the key is a bit more tricky.
+
+![Somewhat complex (not really) key generation](img/4.png)
+
 Stepping through `x32dbg` I was able to figure out the formula to be:
 ```
 key = 'Apr ' + '26 2' + <.bss rva> + some int - 1
