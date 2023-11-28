@@ -93,7 +93,6 @@ def decrypt_strings(secret_sauce):
     br = BinaryReader(bv, address=bss)
 
     rva = bss - bv.start
-    print(hex(rva))
 
     # TODO: Get key dynamically
     key1 = int.from_bytes(b"Apr ", "little")
@@ -114,3 +113,5 @@ def decrypt_strings(secret_sauce):
 
 print(decrypt_strings(18))
 ```
+
+![Final decrypted strings](img/8.PNG)
