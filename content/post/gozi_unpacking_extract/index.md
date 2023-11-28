@@ -57,7 +57,7 @@ The pseudo code could be understood as:
 result = ""
 
 prev = 0
-for i in range(400):
+for i in range(0x400):
     dword = encrypted_data[ i*4 : (i*4) + 4 ]
     if dword == 0x0:
         break
@@ -105,7 +105,7 @@ def decrypt_strings(secret_sauce):
     prev = 0x0
     curr = int.from_bytes(br.read(0x4), "little")
     data = b""
-    for _ in range(400):
+    for _ in range(0x400):
         if curr == 0x0:
             break
         result = (prev - key + curr & 0xffffffff).to_bytes(4, "little")
