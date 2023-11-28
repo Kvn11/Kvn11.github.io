@@ -18,7 +18,7 @@ subtitle = "Trying to become IRL netrunner"
 [sidebar.avatar]
 enabled = true
 local = true
-src = "img/avatar.png"
+src = "img/avatar.JPG"
 
 [article]
 math = false
