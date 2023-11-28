@@ -92,7 +92,10 @@ def decrypt_strings(secret_sauce):
     bss = bv.get_section_by_name(".bss").start
     br = BinaryReader(bv, address=bss)
 
-    rva = bss - 0x400000
+    rva = bss - bv.start
+    print(hex(rva))
+
+    # TODO: Get key dynamically
     key1 = int.from_bytes(b"Apr ", "little")
     key2 = int.from_bytes(b"26 2", "little")
     key = key1 + key2 + rva + secret_sauce
