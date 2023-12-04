@@ -130,3 +130,21 @@ It seems to create a string `|SPL|`
 Doing some OSINT reveals that this might be an IOC for `SplPacker`.
 
 ![ What is SPL?](img/11.png)
+
+There is also a string `DllRegisterServer` that is created dynamically, so thats something else to watch out for.
+Since it seems that this is modifying memory and potentially unpacking something, I figured it might be easier at this point to just reverse this part dynamically.
+Also, Binja isn't correctly deducing the function calls to these resolved APIs, so we need to define them ourselves and then change their type.
+We can do this by creating new types:
+
+![ All the calls just need to follow this pattern ](img/12.png)
+
+I quickly arrive at a function that is doing some type of hashing.
+It doesn't specify what type of hashing to do, so the process will use the default value, which I am unsure of what it would be.
+ChatGPT says this would be using `PROV_RSA_FULL`.
+
+![ Hashing function? ](img/13.png)
+
+When stepping through `x64dbg`, I saw it was using `ALG_ID` of `8003` which corresponds to md5.
+Also, I am able to obtain a few more hashes:
+
+![ More hashes obtained. ](img/14.png)
