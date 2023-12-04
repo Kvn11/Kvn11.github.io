@@ -1,5 +1,5 @@
 ---
-title: IcedId Malware config extraction
+title: IcedID Malware config extraction
 description: Unpacking and analyzing a 2022 Gozi malware sample
 date: 2023-12-01 02:45:01-0700
 image: img/cover.jpg
