@@ -77,7 +77,7 @@ Stepping through `x32dbg` I was able to figure out the formula to be:
 key = 'Apr ' + '26 2' + <.bss rva> + some int - 1
 ```
 Some int is a value picked up from calling `NtQuerySystemInformation` and grabbing a `dword` from it.
-The value itself doesn't matter, because that value is divided by `0x13`, and then two values, the `NTSTATUS` return value and 1, are added to it.
+The value itself doesn't matter, because that value is divided by `0x13` and only the remainder is used, and then two values, the `NTSTATUS` return value and 1, are added to it.
 `STATUS_SUCCESS` is defined as `0x0`, so as long as `NtQuerySystemInformation` succeeds, we are only really adding 1 to our remainder.
 Hence the possible values of this mystery integer are 1 - 0x14.
 
