@@ -1,6 +1,6 @@
 ---
 title: IcedID Malware config extraction
-description: Unpacking and analyzing a 2022 Gozi malware sample
+description: Unpacking and analyzing a IcedID malware sample
 date: 2023-12-01 02:45:01-0700
 image: img/cover.jpg
 categories:
@@ -148,3 +148,23 @@ When stepping through `x64dbg`, I saw it was using `ALG_ID` of `8003` which corr
 Also, I am able to obtain a few more hashes:
 
 ![ More hashes obtained. ](img/14.png)
+
+Also, as I stepped through some of the functions I found what looked to be RC4 encryption algo.
+This assumption was based on the fact that it had 3 loops, each with 256 iterations, which matches up with the profile of RC4.
+
+![ RC4 ](img/15.png)
+
+There are 2 references to this data, so I labeled them as potential decryption functions.
+In both of these references, a key of `11c742c6` is used.
+There is also another function that does some type of encryption or encoding using the same data, key, and key length, although I wasn't able to understand it at the time.
+Additionally, from the references to the data and key, I was able to deduce that the code is using this structure:
+
+```c
+struct data_block {
+    PVOID pdata;
+    uint64_t data_len;
+}
+```
+It passes references to this structure to its encryption routines.
+
+![ Not sure what this does ](img/16.png)

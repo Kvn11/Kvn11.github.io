@@ -1,6 +1,6 @@
 ---
 title: Gozi malware unpacking and config extraction
-description: Unpacking and analyzing a 2022 Gozi malware sample
+description: Unpacking and analyzing a Gozi malware sample
 date: 2023-11-27 02:45:01-0700
 image: img/cover.JPG
 categories:
