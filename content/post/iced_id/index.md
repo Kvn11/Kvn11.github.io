@@ -43,8 +43,7 @@ However, due to the fake branching, the code is a bit convuluted and hard to fol
 I decided to make a script to get rid of them.
 
 ```python
-def remove_fake_branches(fn_addr):
-    def is_jump(instr):
+def is_jump(instr):
     if instr.tokens[0].text in ["je", "jne", "jz", "jnz"]:
         return True
     else:
@@ -168,3 +167,12 @@ struct data_block {
 It passes references to this structure to its encryption routines.
 
 ![ Not sure what this does ](img/16.png)
+
+At this point, I felt that it would be easier to see how these functions are used from `x64dbg`, so I went back to it.
+I ended up putting an access breakpoint on the data section, so i could see when the hex strings start getting used.
+Through this method I was able to figure out the following chunk of data was some type of metadata about the hexstream in the `.data` section.
+
+![ Metadata before the hex stream ](img/17.png)
+
+Also, the hex stream is converted from hex to bytes, and then copies into the section created earlier in the process.
+Then the data is hashed several times, maybe to verify its integerity.
