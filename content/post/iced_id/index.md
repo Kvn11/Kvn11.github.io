@@ -265,4 +265,57 @@ Windows defender was able to recognize it as malware, so this is probably the pa
 Section 4 was a `.jfif` file, that contain an image of a lion emblem.
 I'll do some analysis on that in a bit in case it contains anything interesting inside the image.
 Section 5 was a jpeg of a drawing of a woman.
-I will also analyze this later.
+
+![Interesting pics](img/20.png)
+
+## Dumped PE
+
+This PE is a lot easier to read.
+It will immediately create a thread, with `THREAD_CREATE_RUN_IMMEDIATELY`.
+There is a call to `Sleep` which we can get rid of to speed up analysis.
+Then we almost immediately hit the decryption routine that reveals the C2 address we have been hunting for.
+
+![ Call to decryption routine](img/21.png) ![ Simple XOR ](img/22.png)
+
+In this case it was: `ilekvoyn.com`.
+Continuing through the code, it becomes clear that it is crafting a URL request to this address.
+It uses a cookie value obtained early from querying something in our kernel.
+Then adds in the result of `GetSysCount64` / 1000, then adds in some other values.
+Since this is a quick challenge, and an old sample I did not bother seeing what how the value was being generated, but I can assume safely assume it's likely something unique to our infection.
+
+![Cookie string creation](img/23.png) ![My special cookie](img/24.png)
+
+Anyways, the goal of this challenge was to unpack and grab the c2 address, and we have enough information to do that.
+We just need to combine our unpacking script with the string decryption, and we should be good.
+
+```python
+from binaryninja import BinaryReader
+import re
+
+def xor_decrypt(data_addr):
+    br = BinaryReader(bv, address=data_addr)
+    data = br.read(0x80)
+    config = b""
+    for i in range(0x20):
+        config += (data[i] ^ data[i + 0x40]).to_bytes(1, "little")
+    return config
+
+def extract_url_from_bytes(byte_string):
+    extracted_ascii = b""
+    for byte in byte_string:
+        if 32 <= byte <= 126:
+            extracted_ascii += bytes([byte])
+    extracted_ascii = extracted_ascii.decode("utf-8")
+    pattern = re.compile('.*com')
+    url = pattern.search(extracted_ascii)
+    return url.group(0)
+    
+config = xor_decrypt(0x7ffc97718000)
+url = extract_url_from_bytes(config)
+print(f"[*] C2 Address -> {url}")
+```
+![ Finished ](img/25.png)
+
+I could have automated the entirety of this, but its an old sample so I don't wanna put a ton of effort into something that may only be valid for this sample, so instead I'll move onto a fresh upload, maybe agent tesla :D
+
+You can find all the scripts I used [HERE](https://github.com/Kvn11/scripts/tree/main)
