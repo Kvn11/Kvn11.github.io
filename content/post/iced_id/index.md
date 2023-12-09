@@ -43,6 +43,13 @@ However, due to the fake branching, the code is a bit convuluted and hard to fol
 I decided to make a script to get rid of them.
 
 ```python
+def is_fake_cmp(instr):
+    if instr.tokens[0].text == "cmp":
+        op1 = instr.tokens[2]
+        op2 = instr.tokens[4]
+        if op1.text == op2.text:
+            return True
+
 def is_jump(instr):
     if instr.tokens[0].text in ["je", "jne", "jz", "jnz"]:
         return True
@@ -94,7 +101,7 @@ def remove_fake_branches(fn_addr):
                 n_patched +=1
 
 bv.begin_undo_actions()
-remove_fake_branches(0x7ffdb45a1054)
+remove_fake_branches(0x7ffd00e31000)
 bv.commit_undo_actions()
 ```
 Also, you will need to disable `Tail Call Analysis` in whatever tool you are using, otherwise, there the psuedo c view will not be as concise as it could be.
@@ -115,7 +122,7 @@ I'll fix the theme a eventually, for now I'll just have to keep it.
 
 `EnumWindows` accepts a callback function, which is a prime candidate for inserting a malicous function, so I decided to explore that next.
 
-## Callback function
+### Callback function
 
 Again, this function has a lot of fake branches, so prune those first.
 I then also read this [article](https://binary.ninja/2023/11/13/obfuscation-flare-on.html) that explain what tail calls were, and how to fix them, so I had to reopen my file with the correct settings disabled to make everything easier to read.
@@ -153,6 +160,8 @@ This assumption was based on the fact that it had 3 loops, each with 256 iterati
 
 ![ RC4 ](img/15.png)
 
+### Decryption
+
 There are 2 references to this data, so I labeled them as potential decryption functions.
 In both of these references, a key of `11c742c6` is used.
 There is also another function that does some type of encryption or encoding using the same data, key, and key length, although I wasn't able to understand it at the time.
@@ -176,3 +185,78 @@ Through this method I was able to figure out the following chunk of data was som
 
 Also, the hex stream is converted from hex to bytes, and then copies into the section created earlier in the process.
 Then the data is hashed several times, maybe to verify its integerity.
+It was also at this point where I realized that the function that I had thought to be encoding was actually a second type of decryption that is applied to the data after it has been passed through the RC4 routine.
+The strategy I used to do this was to check for instructions that moved data from either a stack variable or process memory to a register or vice versa.
+Another hint was that this also used the same parameters as the RC4 function.
+Then you see the operations that are done upon it.
+The authors of this malware use an obfuscation technique in this encryption where they add values, and then subtract them, essentially restoring the original value.
+The obfuscated formula for the xor encryption is:
+```
+data[i] = (data[i] ^ key[i % len(key)])
+data[i] -= data[i + 1]
+data[i] += 0x100 - 0x100
+data[i] += (i % len(key)) & 0xFF
+data[i] -= (i % len(key)) & 0xFF 
+```
+which simplifies down to:
+```
+data[i] = (data[i] ^ key[i % len(key)]) - data[i + 1]
+```
+Because python treats the operands of these operations as signed integers we also need to add a mask of `0xFF` to cut the resulting byte/s to the right size. 
+
+We can copy these unpacking process in binary ninja with the following script:
+
+```python
+from binaryninja import Transform, BinaryReader
+
+ADDR_OF_DATA = 0x7fff7a1a9040
+KEY = 0x11c742c6
+FILENAME = ""
+
+def get_data(hexstream_addr):
+    br = BinaryReader(bv, address=hexstream_addr)
+    data = ""
+    curr = br.read(2)
+    while curr != b"\x00\x00":
+        data += curr.decode("utf-8")
+        curr = br.read(2)
+    data = bytes.fromhex(data)
+    return data
+
+def rc4_decrypt(data, key=KEY):
+    key = key.to_bytes(4, byteorder="little")
+    rc4 = Transform["RC4"]
+    return rc4.encode(data, {"key": key})
+
+def xor_decrypt(data, key=KEY):
+    data = bytearray(data)
+    key = key.to_bytes(4, byteorder="little")
+    for i in range(len(data) - 1):
+        b = data[i] ^ key[i % len(key)]
+        b -= data[i + 1]
+        b &= b & 0xFF
+        data[i] = b
+    return data
+
+def unpack(hexstream_addr):
+    data = get_data(hexstream_addr)
+    data = rc4_decrypt(data)
+    data = xor_decrypt(data)
+    with open(FILENAME, "wb") as f:
+        f.write(data)
+    return True
+
+unpack(ADDR_OF_DATA)
+```
+
+This script leaves us with a big ole dump file.
+But it is progress :)
+
+If we go back to binja with all the new information we picked up from dynamic analysis, and and follow what happens after this decryption function is called, we will see that the unpacked data is parsed for the string "|SPL|".
+
+![ Searching for `|SPL|` ](img/18.png)
+
+If we search for this value ourselves, we can see that it is used as a seperator.
+There are 3 payloads that are in this dump.
+
+![ 3 for the price of 1 ](img/19.png)
