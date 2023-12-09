@@ -37,7 +37,7 @@ After the dll is loaded in `x64dbg`, I just set breakpoints on each of the expor
 
 When continuing, the first breakpoints I hit is the first function I called, `DllRegisterServer`.
 This function was filled with instructions like `cmp al, al; jne` which were interesting because I don't think the jump would ever trigger.
-My thought is that this was supposed to be an anti analysis technique by the authors but I am not sure.
+My thought is that this was supposed to be an anti analysis technique.
 Also, I quickly realized that debugging without knowing what I was looking for would be confusing and not very fruitful so I went back to binja to do some static analysis.
 However, due to the fake branching, the code is a bit convuluted and hard to follow.
 I decided to make a script to get rid of them.
@@ -104,7 +104,7 @@ bv.begin_undo_actions()
 remove_fake_branches(0x7ffd00e31000)
 bv.commit_undo_actions()
 ```
-Also, you will need to disable `Tail Call Analysis` in whatever tool you are using, otherwise, there the psuedo c view will not be as concise as it could be.
+Also, from reading this [article](https://binary.ninja/2023/11/13/obfuscation-flare-on.html) you will need to disable `Tail Call Analysis` in whatever tool you are using, otherwise, the psuedo c view will not be as concise as it could be.
 And just like that, the control flow becomes so much easier to read.
 Ngl, seeing this happen in real time was very satisfying.
 
@@ -117,23 +117,18 @@ I set breakpoints at these calls so I could figure out what api it was grabbing.
 
 I also found a check where the malware will only run its attack if the year is `2022`.
 I ended up patching this instruction to always jump in `x64dbg`.
-I also had to change my binja theme back to regular dark because the struct member name color was the same color as the background, so it wasn't showing up in screenshots :/
-I'll fix the theme a eventually, for now I'll just have to keep it.
-
 `EnumWindows` accepts a callback function, which is a prime candidate for inserting a malicous function, so I decided to explore that next.
 
 ### Callback function
 
 Again, this function has a lot of fake branches, so prune those first.
-I then also read this [article](https://binary.ninja/2023/11/13/obfuscation-flare-on.html) that explain what tail calls were, and how to fix them, so I had to reopen my file with the correct settings disabled to make everything easier to read.
-
 The callback function seems to just get a handle to a windows, then it enters a function that seems to be doing some type of memory copying operations.
 
 ![Maybe COM injection?](img/9.png) ![Maybe this is the unpacking routine?](img/10.png)
 
 Following along some of the function calls results in finding what seems to be a promising function.
 It seems to create a string `|SPL|`
-Doing some OSINT reveals that this might be an IOC for `SplPacker`.
+Doing some OSINT reveals that this might be an IoC for `SplPacker`.
 
 ![ What is SPL?](img/11.png)
 
@@ -162,8 +157,8 @@ This assumption was based on the fact that it had 3 loops, each with 256 iterati
 
 ### Decryption
 
-There are 2 references to this data, so I labeled them as potential decryption functions.
-In both of these references, a key of `11c742c6` is used.
+There are 2 references to this RC4 function, so I labeled them as potential decryption functions.
+In both of these references, a key of `0x11c742c6` is used.
 There is also another function that does some type of encryption or encoding using the same data, key, and key length, although I wasn't able to understand it at the time.
 Additionally, from the references to the data and key, I was able to deduce that the code is using this structure:
 
@@ -183,7 +178,7 @@ Through this method I was able to figure out the following chunk of data was som
 
 ![ Metadata before the hex stream ](img/17.png)
 
-Also, the hex stream is converted from hex to bytes, and then copies into the section created earlier in the process.
+Also, the hex stream is converted from hex to bytes, and then copies into the section created by `NtCreateSection` earlier in the process.
 Then the data is hashed several times, maybe to verify its integerity.
 It was also at this point where I realized that the function that I had thought to be encoding was actually a second type of decryption that is applied to the data after it has been passed through the RC4 routine.
 The strategy I used to do this was to check for instructions that moved data from either a stack variable or process memory to a register or vice versa.
@@ -263,7 +258,7 @@ There are 5 payloads that are in this dump.
 
 I placed each in `HxD` and used their magic bytes to determine what they are.
 The first is some stub code that was jumped to from the main process.
-I saw this in `x64dbg` when tracking the `CreateMapSection` api call.
+I saw this in `x64dbg` when tracking the `NtCreateSection` api call.
 The second one might be a compressed PE file, cuz I can see a PE header, but I'll analyze that in Binja soon.
 The third is a full PE file.
 Windows defender was able to recognize it as malware, so this is probably the payload the contains the config we want.
