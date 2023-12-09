@@ -257,6 +257,17 @@ If we go back to binja with all the new information we picked up from dynamic an
 ![ Searching for `|SPL|` ](img/18.png)
 
 If we search for this value ourselves, we can see that it is used as a seperator.
-There are 3 payloads that are in this dump.
+There are 5 payloads that are in this dump.
 
-![ 3 for the price of 1 ](img/19.png)
+![ 5 for the price of 1 ](img/19.png)
+
+I placed each in `HxD` and used their magic bytes to determine what they are.
+The first is some stub code that was jumped to from the main process.
+I saw this in `x64dbg` when tracking the `CreateMapSection` api call.
+The second one might be a compressed PE file, cuz I can see a PE header, but I'll analyze that in Binja soon.
+The third is a full PE file.
+Windows defender was able to recognize it as malware, so this is probably the payload the contains the config we want.
+Section 4 was a `.jfif` file, that contain an image of a lion emblem.
+I'll do some analysis on that in a bit in case it contains anything interesting inside the image.
+Section 5 was a jpeg of a drawing of a woman.
+I will also analyze this later.
