@@ -1,3 +1,14 @@
 /*
     You can add your own custom styles here.
 */
+/*
+:root {
+    &[data-scheme="dark"] {
+        --body-background: #261C2C;
+        --card-background: #3E2C41;
+        --scrollbar-thumb: hsl(0, 0%, 40%);
+        --scrollbar-track: var(--body-background);
+
+    }
+}
+*/
