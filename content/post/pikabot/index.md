@@ -28,5 +28,7 @@ There were also a large number of exports, all named after some drawing related 
 
 Due to the massive amount of exports, and not having access to the delivery method part of the sample, figuring out the function responsible for unpacking is going to be difficult.
 However, Pikabot is known to use a lot of anti analysis, so a good place to start would be to look for usage of `IsDebuggerPresent`, since the locations in where it appears are likely part of the unpacking process.
-I just hope every function doesn't contain it, but I think this method should work to narrow down the functions to look at first.
+And fortunately, it only appears once, making this idea a success.
+This gives me a starting point from where I can start unraveling this sample.
 
+![ Turning the table on their anti-anlysis ](img/2.png)
