@@ -2,7 +2,7 @@
 title: Pikabot malware analysis
 description: Unpacking and analyzing a Pikabot malware sample
 date: 2023-12-12 02:45:01-0700
-image: img/cover.png
+image: img/cover.jpg
 categories:
     - Malware
 tags:

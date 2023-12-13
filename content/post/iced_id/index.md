@@ -2,7 +2,7 @@
 title: IcedID Malware config extraction
 description: Unpacking and analyzing a IcedID malware sample
 date: 2023-12-01 02:45:01-0700
-image: img/cover.png
+image: img/cover.jpg
 categories:
     - Malware
 tags:
