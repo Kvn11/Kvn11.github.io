@@ -1,7 +1,7 @@
 ---
 title: When Leetcode Meets Hacking
 description: Solution for HTB Web Challenge 0xBOverchunked
-date: 2023-02-08 02:45:01-0700
+date: 2024-02-08 02:45:01-0700
 image: img/hackthebox.jpg
 categories:
     - HackTheBox
