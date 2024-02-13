@@ -21,19 +21,20 @@ The vulnerability is very straightforward and easy to spot, and you get to write
 There is an SQL injection available within the `unsafequery()` function.
 
 ```php
-function safequery($pdo, $id)
+function unsafequery($pdo, $id)
 {
-    if ($id == 6)
+    try
     {
-        die("You are not allowed to view this post!");
+        $stmt = $pdo->query("SELECT id, gamename, gamedesc, image FROM posts WHERE id = '$id'");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result;
     }
-
-    $stmt = $pdo->prepare("SELECT id, gamename, gamedesc, image FROM posts  WHERE id = ?");
-    $stmt->execute([$id]);
-
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    return $result;
+    catch(Exception $e)
+    {
+        http_response_code(500);
+        echo "Internal Server Error";
+        exit();
+    }
 }
 ```
 
