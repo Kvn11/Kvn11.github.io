@@ -154,7 +154,7 @@ And our goal is for the bot to visit our page, our page sends a request to the l
 
 Enter DNS Rebind.
 While searching for bypasses on hacktricks, I came across this method.
-The attack relies on changing the IP address for a domain quickly (rebinding it), very quickly, sort of like a race condition.
+The attack relies on changing the IP address for a domain (rebinding it), very quickly, sort of like a race condition.
 How does that help us here?
 Well in the source code for the bot, we can see that it doensn't perform all its actions immediately, there are delays.
 So the problem is that the client is making a request to `http://localhost/debug` from `http://attacker.com`, which gets blocked.
