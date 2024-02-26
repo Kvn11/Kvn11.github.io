@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Programming on Kvn11</title><link>https://Kvn11.github.io/tags/programming/</link><description>Recent content in Programming on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 18 Feb 2024 02:45:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/tags/programming/index.xml" rel="self" type="application/rss+xml"/><item><title>Mastering leetcode P1 - Topological Sort</title><link>https://Kvn11.github.io/p/mastering-leetcode-p1-topological-sort/</link><pubDate>Sun, 18 Feb 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/mastering-leetcode-p1-topological-sort/</guid><description>&lt;img src="https://th.bing.com/th/id/OIP.Jia0SYyUs0LPd97k4SKwbAHaEA?rs=1&amp;pid=ImgDetMain" alt="Featured image of post Mastering leetcode P1 - Topological Sort" />&lt;h2 id="intro">Intro&lt;/h2>
+&lt;p>Back when I was studying for SWE interviews, there were 13 patterns that I read were prevalent in most interviews, and did encounter in my interviews.
+Knowing them perfectly, and when to apply them was essential to passing.
+One of the harder ones is topological sort.
+This is a type of sorting algorithm used on graphs that are &lt;strong>Directed and Acyclic&lt;/strong>.
+This is because the algorithm will always return the nodes with no &amp;ldquo;children&amp;rdquo; last, and will print the parents first.
+The examples on Geeks for Geeks is this:&lt;/p>
+&lt;p>&lt;img src="https://media.geeksforgeeks.org/wp-content/uploads/20231016113524/example.png"
+loading="lazy"
+alt="Directed Acyclic Graph"
+>&lt;/p>
+&lt;p>The &amp;ldquo;parent&amp;rdquo; nodes will be printed first, so in this case it would be either 5 or 4 first, followed by 2, then 3, then 0 or 1.
+Since its possible for there to be multiple &amp;ldquo;parent&amp;rdquo; nodes, then its possible for the final order to be expressed in several different ways.
+However, there is a simple rule that must be followed.
+Given two nodes (connected in 1 direction) &lt;code>Node 1 -&amp;gt; Node 2&lt;/code>, &lt;code>Node 1&lt;/code> must come first.&lt;/p>
+&lt;h2 id="implementation">Implementation&lt;/h2>
+&lt;p>The actual implementation isn&amp;rsquo;t super difficult, and its been covered extensively and better elsewhere so I won&amp;rsquo;t go into super deep details.
+First we need to define what a &amp;ldquo;parent&amp;rdquo; node is.
+In this case, it would be a node with no &lt;code>in-degrees&lt;/code>, which means that no nodes point to it.
+In most of the problems you will be given, the input will usually be an array or list of directed edges, so as you build your graph you can also keep track of the degrees for each node, and then start the algorithm at the nodes with the least amount of degrees.
+For every node with 0 in degrees, you remove that node and subtract the node from the in-degrees of its children.
+Then repeat until finished.&lt;/p>
+&lt;p>Another approach is using recursion.
+given any node, you can use DFS to travel to through its children until you reach a node with no children, and then you add that child to a stack, and then
+add the parent to the stack.
+You have to keep track of the visited nodes, but in the end you will have a correctly sorted stack.&lt;/p>
+&lt;p>The first approach will require a way to keep track the in-degrees of every node, and sort them.
+The second approach uses recursion but doesn&amp;rsquo;t require a method for keeping track of the in-degrees.
+In both you need a way to keep track of visited nodes, and a stack or queue to print out the final result.&lt;/p>
+&lt;h2 id="application">Application&lt;/h2>
+&lt;p>You generally want to apply this algo whenever you see a problem that has some type of dependency.
+It&amp;rsquo;s easier to explain with some examples.&lt;/p>
+&lt;h2 id="example-1">Example 1&lt;/h2>
+&lt;blockquote>
+&lt;p>There is a new alien language that uses the English alphabet.
+However, the order of the letters is unknown to you.
+You are given a list of strings &lt;code>words&lt;/code> from the alien language&amp;rsquo;s dictionary.
+Now it is claimed that the strings in &lt;code>words&lt;/code> are sorted lexicographically by the rules of this new language.
+If this claim is incorrect, and the given arrangment of string in &lt;code>words&lt;/code> cannot correspond to any order of letters, return &amp;ldquo;&amp;rdquo;.
+Otherwise return a string of the unique letters in the new alien language sorted in lexicographically increasing order by the new language&amp;rsquo;s rules.
+If there are multiple solutions, return any of them.&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="test-case-1">Test Case 1:&lt;/h3>
+&lt;blockquote>
+&lt;p>Input: words = &lt;code>[&amp;quot;wrt&amp;quot;, &amp;quot;wrf&amp;quot;, &amp;quot;er&amp;quot;, &amp;quot;ett&amp;quot;, &amp;quot;rftt&amp;quot; ]&lt;/code>.
+Output: &lt;code>&amp;quot;wertf&amp;quot;&lt;/code>&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="test-case-2">Test Case 2:&lt;/h3>
+&lt;blockquote>
+&lt;p>Input: words = &lt;code>[&amp;quot;z&amp;quot;, &amp;quot;x&amp;quot;]&lt;/code>
+OUtput: &lt;code>&amp;quot;zx&amp;quot;&lt;/code>&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="intuition">Intuition&lt;/h3>
+&lt;p>So here we have a list of strings, where letters are supposed to have &amp;ldquo;dependancies&amp;rdquo; (as implied by the use of the word lexicographically).
+What does this mean?
+Basically alphabetical order, but in whatever order the aliens use.
+So the first part of the problem is to figure out the dependancies.&lt;/p>
+&lt;h2 id="example-2">Example 2&lt;/h2>
+&lt;h2 id="example-3">Example 3&lt;/h2></description></item></channel></rss>
