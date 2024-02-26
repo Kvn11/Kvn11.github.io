@@ -277,4 +277,6 @@ if __name__ == '__main__':
     test(CORSRequestHandler, HTTPServer, port=80)
 ```
 
+![Current attack structure](img/12.png)
+
 ![Referral token acquired](img/11.png)
