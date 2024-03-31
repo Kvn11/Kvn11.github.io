@@ -11,27 +11,28 @@ tags:
     - medium
 ---
 
-> **Challenge Description**: One of our embedded devices has been compromised.
-> It was flashing a message on the debug matrix that was too fast to read, although we managed to capture one iteration of it.
-> We must find out what was displayed.
-> To help you with your mission, we will also provide you with the fabrication files of the PCB module the matrix was on.
+## Locating Vulnerability
 
-## Walkthrough
+The challenge consists of a web server that allows a user to upload an mp3 file, and then plays that file.
 
-The zip files contains a Gerber module, as well as a `.csv` containing what seems to be the outputs of different `GPIO` pins, as well as the time they were recorded.
+![Really cool pixel art](img/1.png)
 
-Having never really worked with a Gerber module before I had to do research to figure out its importance and usage.
+Next, it is time to reverse engineer the application in binary ninja.
+The code is pretty straightforward, there is a check to see if the uploaded file is an mp3.
 
-Gerber describes the elements of a printed circuit board (PCB).
-It is used for both the fabrication of the board, and its assembly.
-A quick google search tells me that I can open the files using `gerbv`.
-For some reason, the window would go black whenever I tried importing the `.DRL` files, so I excluded those. However, this is the final result:
+![Main function](img/2.png) ![mp3 check](img/3.png)
 
-![Gerber File](img/img_1.png)
+In the mp3 check, there seems to be some "beta" functionality, which is where the code to reveal the flag is.
 
-There is a term `Common Anode Matrix` that I have never heard of before, as well as the MCU on the board being a `Raspberry Pi 3b+ Hat`.
-ChatGPT reveals that a common anode matrix is simply a grid of LED's, and specific LED's are supplied voltage to create images, letters, or numbers.
-Based on this, I can assume that the flag is flashing on the matrix, and I need to map the outputs of the `.csv` file to its LED on the board.
-I was able to find the following image online which nicely displays the pinout of the Raspberry Pi:
+![Read flag](img/4.png)
 
-![Pinout](img/img_2.png)
+We need to change two of the variables to different values in order to trigger the beta function.
+There are 2 `freads` that occur in this function.
+Both read from the mp3 file we upload.
+The first one is a read of 3 bytes, which is meant to obtain the magic bytes of the file.
+The magic bytes need to be the string `ID3`.
+
+The second read is of size `0x16` bytes, and is interesting because the read bytes are later printed via a `printf` statement.
+This makes me think that we could do a write via a format string vulnerability.
+At this point, I don't know if there is an overflow in any of the `fread` calls, but we know that there is a pointer to the two values we need to change, which we can catch with a format string exploit, and then we can write a specific value to those addresses using a format string payload.
+The next step is to verify these vulnerabilities with a debugger.
