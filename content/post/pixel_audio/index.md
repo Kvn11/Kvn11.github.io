@@ -36,3 +36,15 @@ The second read is of size `0x16` bytes, and is interesting because the read byt
 This makes me think that we could do a write via a format string vulnerability.
 At this point, I don't know if there is an overflow in any of the `fread` calls, but we know that there is a pointer to the two values we need to change, which we can catch with a format string exploit, and then we can write a specific value to those addresses using a format string payload.
 The next step is to verify these vulnerabilities with a debugger.
+
+## Verifying vulnerability
+
+I built a PoC payload using the correct magic bytes, and used a cyclic pattern of `0x16` bytes incase there is an overflow.
+
+![First payload](img/5.png)
+
+Since we have a specific libc to use, we have to use the following command to run the binary:
+
+```bash
+LD_LIBRARY_PATH=/path/to/glibc LD_PRELOAD=/path/to/glibc/libc.so.6 ./main
+```
