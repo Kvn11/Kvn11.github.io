@@ -48,3 +48,18 @@ Since we have a specific libc to use, we have to use the following command to ru
 ```bash
 LD_LIBRARY_PATH=/path/to/glibc LD_PRELOAD=/path/to/glibc/libc.so.6 ./main
 ```
+Additionally the file is being called as `/tmp/test.mp3` so we need to change the name and location of our PoC.
+
+Behaviour is as expected, no obvious overflow since stack cookie fail was not triggered.
+
+![Def a format string challenge](img/6.png)
+
+Checking out a generic format string payload in GDB, I was also able to verify that there was no overflow.
+
+![Format string vuln for sure](img/7.png)
+
+The payload starts at `0x7fffffffdbd0`, and isn't enough to overwrite not even the stack cookie, which is at `0x7fffffffdbe8`
+So at this point I am confident that this is just a format string vuln.
+I am able to get the pointers to the values that need to change by referencing the 12th and 13th character: `%12$p.%13$p`
+
+![The two addresses we need to write to.](img/8.png)
