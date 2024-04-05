@@ -68,7 +68,7 @@ I am able to get the pointers to the values that need to change by referencing t
 
 Since we now know where to write, we can craft our write.
 The first write will be for 48879, and the second for 495.
-The reason for this is that the after the first write (48879 = `beef`), then we need to subtract that write from the second (48879 = `c0de`).
+The reason for this is that the after the first write (48879 = `beef`), then we need to subtract that write from the second (49374 = `c0de`).
 So the payload becomes: `ID3%48879x%12$n%495x%13$n`, which fits perfectly in our 22 byte restriction.
 
 ![Before `printf`](img/9.png) ![After `printf`](img/10.png)
