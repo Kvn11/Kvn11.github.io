@@ -60,6 +60,11 @@ Checking out a generic format string payload in GDB, I was also able to verify t
 
 The payload starts at `0x7fffffffdbd0`, and isn't enough to overwrite not even the stack cookie, which is at `0x7fffffffdbe8`
 So at this point I am confident that this is just a format string vuln.
-I am able to get the pointers to the values that need to change by referencing the 12th and 13th character: `%12$p.%13$p`
+I am able to get the pointers to the values that need to change by referencing the 12th and 13th values on the stack: `%12$p.%13$p`
 
 ![The two addresses we need to write to.](img/8.png)
+
+## Exploit
+
+Since we now know where to write, we can craft our write.
+The first write will be for 48879, and the second for 49374.
