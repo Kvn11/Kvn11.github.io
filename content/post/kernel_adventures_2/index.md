@@ -24,4 +24,32 @@ Now we have the code for the vulnerable kernel, and the author provided the imag
 So my first approach here is to look at the `patch.diff` file to see what was changed.
 There was a folder `magic/` that was added.
 Also, there is a new syscall `magic` added to `arch/x86/entry/syscalls/syscall_64.tbl`
-However, the "meat" of the challenge is in `magic/magic.c`.
+However, the "meat" of the challenge is in `magic/magic.c`, which fleshes out the syscall.
+
+From just a quick read through the code, a couple idea's pop out.
+The first one is that there is a condition where you can switch to a "child" user without a password being required.
+Therefore an approach to consider is trying to get the root user to be added as a child of our current user.
+
+```c
+    // Try and switch to a child
+    index = locate_user_by_name(me->children, CHILDLIST_SIZE, username);
+    if (index == -1) {
+        // Not a child, look for the user in the global list
+        index = locate_user_by_name(magic_users, MAINLIST_SIZE, username);
+        if (index == -1) {
+            // User doesn't exist at all
+            return -ENOENT;
+        } else if (index == 0) {
+            // Prevent logging back in as root
+            return -EPERM;
+        }
+        child = magic_users[index];
+        // Check the passed password is correct - if no password was passed, fail
+        if (password == NULL) return -EFAULT;
+        if (strncmp(password, child->password, 64) != 0) {
+            return -EPERM;
+        }
+    } else {
+        // Switching to a child is allowed without the password
+        child = me->children[index];
+```
