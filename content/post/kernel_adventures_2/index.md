@@ -26,30 +26,34 @@ There was a folder `magic/` that was added.
 Also, there is a new syscall `magic` added to `arch/x86/entry/syscalls/syscall_64.tbl`
 However, the "meat" of the challenge is in `magic/magic.c`, which fleshes out the syscall.
 
-From just a quick read through the code, a couple idea's pop out.
-The first one is that there is a condition where you can switch to a "child" user without a password being required.
-Therefore an approach to consider is trying to get the root user to be added as a child of our current user.
+Lets walkthrough what the new syscall does.
+First it will initialize itself via the `do_init()` function, but only if the `initialized` value is not 0.
 
 ```c
-    // Try and switch to a child
-    index = locate_user_by_name(me->children, CHILDLIST_SIZE, username);
-    if (index == -1) {
-        // Not a child, look for the user in the global list
-        index = locate_user_by_name(magic_users, MAINLIST_SIZE, username);
-        if (index == -1) {
-            // User doesn't exist at all
-            return -ENOENT;
-        } else if (index == 0) {
-            // Prevent logging back in as root
-            return -EPERM;
-        }
-        child = magic_users[index];
-        // Check the passed password is correct - if no password was passed, fail
-        if (password == NULL) return -EFAULT;
-        if (strncmp(password, child->password, 64) != 0) {
-            return -EPERM;
-        }
-    } else {
-        // Switching to a child is allowed without the password
-        child = me->children[index];
+void do_init() {
+    char username[64] = "root";
+    char password[64] = "password";
+    struct MagicUser* root;
+
+    spin_lock(&magic_lock);
+    root = kzalloc(sizeof(struct MagicUser), GFP_KERNEL);
+    root->uid.val = 0;
+    memcpy(root->username, username, sizeof(username));
+    memcpy(root->password, password, sizeof(password));
+    root->children = kzalloc(sizeof(struct MagicUser*) * CHILDLIST_SIZE, GFP_KERNEL);
+    magic_users[0] = root;
+    nextId = 1;
+    initialized = 1;
+    spin_unlock(&magic_lock);
+}
 ```
+
+This function sets the default username and password to `root:password`.
+It also defines a `MagicUser*` called root.
+Then `kzalloc` is called and the resulting pointer is assigned to `root`.
+From my understanding, `kzalloc` will allocate a chunk and initialize its memory to zero.
+An important thing to note here is that this allocation will need to be freed at some point.
+Anyways, this function pretty much sets the first user to be root, then creates an allocation for the next user, who will be the child of this root user.
+
+Now lets look at the individual actions we can get this syscall to perform.
+Lets start with adding a user.
