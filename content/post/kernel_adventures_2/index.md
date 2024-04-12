@@ -13,6 +13,8 @@ tags:
 
 ## Setup
 
+WORK IN PROGRESS...
+
 This is the solution for HTB's `Kernel Adventures: Part II`, and in the process, we can learn and get an introduction to kernel exploitation.
 After you download the challenge, just follow the instructions in the README to get the required version of the linux kernel installed so we can take a look in our code editor.
 However, you may get an error during the `git apply` command.
@@ -56,4 +58,15 @@ An important thing to note here is that this allocation will need to be freed at
 Anyways, this function pretty much sets the first user to be root, then creates an allocation for the next user, who will be the child of this root user.
 
 Now lets look at the individual actions we can get this syscall to perform.
-Lets start with adding a user.
+Lets start with adding a user with `long do_add(char* username, char* password)`.
+First it checks if the user that will be added exists.
+This is done by just iterating over the list of users, and checking the username against the supplied username.
+Then an empty entry in the user list is found, which is where the new user will be added.
+This works similar to the find function, where the user list is iterated over until a null entry is found, and that index is returned.
+Then a search for the current user is conducted, but this time by uuid.
+Again, this is just a simple for loop that compares uid, nothing special.
+Then it will locate an empty slot in the current users child list.
+Then another call to `kzalloc` for the new user.
+And the next user is given the `nextId` value, which will be +1 from the previous.
+Maybe we could just create new users until we overflow the `uid` value to be 0 again?
+The the pointer to the child is copied into both the main list, and the current user's child list, and the `id` is incremented.
