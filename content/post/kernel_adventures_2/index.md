@@ -16,6 +16,9 @@ tags:
 WORK IN PROGRESS...
 
 This is the solution for HTB's `Kernel Adventures: Part II`, and in the process, we can learn and get an introduction to kernel exploitation.
+We will solve it manually first, then build a fuzzer to locate the vulnerability.
+We will learn how to debug at the kernel level.
+
 After you download the challenge, just follow the instructions in the README to get the required version of the linux kernel installed so we can take a look in our code editor.
 However, you may get an error during the `git apply` command.
 To resolve these, you first need to run `git checkout ff1ffd71d5f0612cf194f5705c671d6b64bf5f91` to revert the repo to the commit in which the vulnerability was introduced.
