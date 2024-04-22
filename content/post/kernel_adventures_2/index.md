@@ -24,6 +24,12 @@ However, you may get an error during the `git apply` command.
 To resolve these, you first need to run `git checkout ff1ffd71d5f0612cf194f5705c671d6b64bf5f91` to revert the repo to the commit in which the vulnerability was introduced.
 Now we have the code for the vulnerable kernel, and the author provided the image meant for the challenge.
 
+## Goals
+
+So I will take 2 approaches here.
+The first is to do a code review to find the vuln by hand (eyes).
+Then I want to build a fuzzer to automate the finding.
+
 ## Finding Vulnerability
 
 So my first approach here is to look at the `patch.diff` file to see what was changed.
@@ -71,5 +77,19 @@ Again, this is just a simple for loop that compares uid, nothing special.
 Then it will locate an empty slot in the current users child list.
 Then another call to `kzalloc` for the new user.
 And the next user is given the `nextId` value, which will be +1 from the previous.
+We should note, that in no other function is there something to decrement the `nextId` value, meaning it will always increase.
 Maybe we could just create new users until we overflow the `uid` value to be 0 again?
-The the pointer to the child is copied into both the main list, and the current user's child list, and the `id` is incremented.
+Seems possible, cuz `nextId` is an unsigned short (2 bytes), so thats a total of `0xFFFF` values.
+Easily doable.
+However, lets think about what we can accomplish with this.
+So lets say we have the ability to change our ID to be that of any other user.
+What can we do?
+Well, lets say we create another user called `Bob`, and lets give him a UID of 0.
+Then that means both `root` and `Bob` will have a UID of 0.
+However, there is the issue that we need to have the same username as the user we want to edit, and we can't set our username as `root` because that user already exists.
+So we can't edit, at least not as simply as calling the edit feature.
+Also, there is a line in the `switch_user` feature that prevents us switching to root if root is not a child.
+So we can't call that one right away either, (or maybe its possible. i havent looked too deep yet)
+However, we seem to have the ability to delete root.
+So maybe we delete, root, create root, and then edit it?
+

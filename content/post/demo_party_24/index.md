@@ -19,3 +19,9 @@ You can see more details at the [official site](https://www.layerone.org/events/
 - LayerOne Demo Board: Create a fantastic audio/video experience using a LayerOne Demo Board!
 - ANSI: Create an awesome 80×23 ANSI art image using the standard 16 colors!
 - Wildcard: Anything goes! Props given for creative use of hardware or software!
+
+## Construction
+
+The construction of the board is straightforward, just follow the diagram included with the kit.
+For the soldering, I found it easier to just use soldering paste opposed to wire.
+It melted faster, and looked cleaner.
