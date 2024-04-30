@@ -1,6 +1,6 @@
 ---
-title: Intro To Kernel Exploitation
-description: Learning kernel exploitation via ctf challenges.
+title: Kernel Adventures Part II
+description: Solution for Kernel Adventures II
 date: 2024-04-08 02:45:01-0700
 image: https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg
 categories:
@@ -16,8 +16,6 @@ tags:
 WORK IN PROGRESS...
 
 This is the solution for HTB's `Kernel Adventures: Part II`, and in the process, we can learn and get an introduction to kernel exploitation.
-We will solve it manually first, then build a fuzzer to locate the vulnerability.
-We will learn how to debug at the kernel level.
 
 After you download the challenge, just follow the instructions in the README to get the required version of the linux kernel installed so we can take a look in our code editor.
 However, you may get an error during the `git apply` command.
