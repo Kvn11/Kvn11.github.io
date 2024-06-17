@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hardware on Kvn11</title><link>https://Kvn11.github.io/tags/hardware/</link><description>Recent content in Hardware on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Wed, 10 May 2023 02:45:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/tags/hardware/index.xml" rel="self" type="application/rss+xml"/><item><title>HTB HW Challenge Trace</title><link>https://Kvn11.github.io/p/htb-hw-challenge-trace/</link><pubDate>Wed, 10 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-hw-challenge-trace/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge Trace" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: One of our embedded devices has been compromised.
+It was flashing a message on the debug matrix that was too fast to read, although we managed to capture one iteration of it.
+We must find out what was displayed.
+To help you with your mission, we will also provide you with the fabrication files of the PCB module the matrix was on.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The zip files contains a Gerber module, as well as a &lt;code>.csv&lt;/code> containing what seems to be the outputs of different &lt;code>GPIO&lt;/code> pins, as well as the time they were recorded.&lt;/p>
+&lt;p>Having never really worked with a Gerber module before I had to do research to figure out its importance and usage.&lt;/p>
+&lt;p>Gerber describes the elements of a printed circuit board (PCB).
+It is used for both the fabrication of the board, and its assembly.
+A quick google search tells me that I can open the files using &lt;code>gerbv&lt;/code>.
+For some reason, the window would go black whenever I tried importing the &lt;code>.DRL&lt;/code> files, so I excluded those. However, this is the final result:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_1.png"
+width="1441"
+height="740"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_1_hu820b72062c5204bbc53581002d8f17d9_114984_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_1_hu820b72062c5204bbc53581002d8f17d9_114984_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Gerber File"
+class="gallery-image"
+data-flex-grow="194"
+data-flex-basis="467px"
+>&lt;/p>
+&lt;p>There is a term &lt;code>Common Anode Matrix&lt;/code> that I have never heard of before, as well as the MCU on the board being a &lt;code>Raspberry Pi 3b+ Hat&lt;/code>.
+ChatGPT reveals that a common anode matrix is simply a grid of LED&amp;rsquo;s, and specific LED&amp;rsquo;s are supplied voltage to create images, letters, or numbers.
+Based on this, I can assume that the flag is flashing on the matrix, and I need to map the outputs of the &lt;code>.csv&lt;/code> file to its LED on the board.
+I was able to find the following image online which nicely displays the pinout of the Raspberry Pi:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_2.png"
+width="793"
+height="599"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_2_hu9b85b2e9e8cc4f23a1927997bb71a49c_793112_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_2_hu9b85b2e9e8cc4f23a1927997bb71a49c_793112_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Pinout"
+class="gallery-image"
+data-flex-grow="132"
+data-flex-basis="317px"
+>&lt;/p></description></item><item><title>HTB HW Challenge: Bare Metal</title><link>https://Kvn11.github.io/p/bare-metal/</link><pubDate>Sun, 07 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/bare-metal/</guid><description>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge: Bare Metal" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: Concerned about the integrity of devices produced at a remote fabrication plant, management has ordered a review of our production line.
+This revealed many things, including a weird embedded device in one of our serial networks.
+In attempting to remove it, we accidentally triggered a hardware failsafe, which resulted in the device stopping working.
+However, luckily we extracted the firmware prior to doing so. We need to find out what it did to the slave device it was tapped into, can you help us?
+The microcontroller of the device appears to be an atmega328p.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>We are given the file &lt;code>extracted_firmware.hex&lt;/code> which contains the hex strings of the data.
+A quick google search tells us that we can use the &lt;code>avr-objdump&lt;/code> to get the disassembly of this binary blob.&lt;/p>
+&lt;p>&lt;code>avr-objdump -s -m avr5 extracted_firmware.hex -D&lt;/code>&lt;/p>
+&lt;p>Looking at the disassembly, it seems that there are a lot of repeated instructions, but there are a few sections where the code is different.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_1.png"
+width="458"
+height="233"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_1_hu01dc96bb05787037390d276ea6159f84_66423_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_1_hu01dc96bb05787037390d276ea6159f84_66423_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First interesting section"
+class="gallery-image"
+data-flex-grow="196"
+data-flex-basis="471px"
+>&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_2.png"
+width="458"
+height="295"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_2_hu8cea776933b49c35db5e3f1b56c65c51_84581_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_2_hu8cea776933b49c35db5e3f1b56c65c51_84581_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Second interesting section"
+class="gallery-image"
+data-flex-grow="155"
+data-flex-basis="372px"
+>&lt;/p>
+&lt;p>We can analyze the repeated sections first to get an idea of what its repeatedly doing.&lt;/p>
+&lt;p>There seems to be two instructionst that repeated, &lt;code>cbi&lt;/code> and &lt;code>sbi&lt;/code> and they are working on the registers at &lt;code>0x0A&lt;/code> and &lt;code>0x0B&lt;/code>.&lt;/p>
+&lt;p>Looking at the datasheet we can see that these are the &lt;code>DDRD&lt;/code> and &lt;code>PORTD&lt;/code> registers respectively.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_3.png"
+width="656"
+height="76"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_3_hua2f673180a250a5ffd6860579d614014_18242_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_3_hua2f673180a250a5ffd6860579d614014_18242_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Registers"
+class="gallery-image"
+data-flex-grow="863"
+data-flex-basis="2071px"
+>&lt;/p>
+&lt;p>The &lt;code>cbi&lt;/code> instruction clears a bit in the register, and &lt;code>sbi&lt;/code> sets the bit.
+Reading about the pin configuration reveals more information as well.&lt;/p>
+&lt;blockquote>
+&lt;p>The DDxn bit in the DDRx register selects the direction of this pin.
+If DDxn is written logic one, Pxn is configured as an output pin.
+If DDxn is written logic zero, Pxn is configured as an input pin.&lt;/p>
+&lt;/blockquote>
+&lt;p>Thus based on this, we know that the instruction at address &lt;code>0x86&lt;/code> is writing logic zero to &lt;code>DDD4&lt;/code>, meaning that &lt;code>PIND4&lt;/code> is configured as an input pin.
+However, this isn&amp;rsquo;t as interesting as the data being written to the &lt;code>PORTD&lt;/code> data register, which presumably holds the data to be sent as output.
+The instructions:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">54 98 cbi 0x0a, 4 ; 10
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">5f 9a sbi 0x0b, 7 ; 11
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">5f 98 cbi 0x0b, 7 ; 11
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>seems to clear the USART internal clock, then seems to toggle bit 7 of Port D, which can either be the analog comparator negative input, or the pin change interrupt source 23.
+I wrote a python script to visualize the changes in the register bits for the rest of the instructions, which helped me see that Port D6 was changing in a repeated pattern, while Port D5 was not changing in a discernable pattern.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_4.png"
+width="835"
+height="55"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_4_hude9e9e9b5421173dcb3064d4291cce47_16504_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_4_hude9e9e9b5421173dcb3064d4291cce47_16504_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Pattern is visible"
+class="gallery-image"
+data-flex-grow="1518"
+data-flex-basis="3643px"
+>&lt;/p>
+&lt;p>Bit 6 seems to be alternating between 0 and 1 so I don&amp;rsquo;t think it would have anything interesting to show.
+Since bit 5 looks more random, I decided to try figure out what it creates.
+Since this is probably transmitting over UART or some type of serial interface, I figured I should start there for visualizing it.&lt;/p>
+&lt;p>In the end, this was my solution for pulling getting the flag.
+For the script to work, you need to isolate the big chunk of &lt;code>cbi&lt;/code> and &lt;code>sbi&lt;/code> instructions and ignore the others.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python3" data-lang="Python3">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_5&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_6&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="nb">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;disassembly.txt&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">as&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">readlines&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">instr&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">lines&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">op&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">reg&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">process_instr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">instr&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">op&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;cbi&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">5&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_5&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">elif&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">6&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">elif&lt;/span> &lt;span class="n">op&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;sbi&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">5&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_5&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">elif&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">6&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">b_string&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">characters&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">b&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">bit_5&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">b_string&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="nb">str&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">b&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">ctr&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">characters&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="nb">chr&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">b_string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">b_string&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">characters&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">process_instr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">instr&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">values&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">instr&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">strip&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">split&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\t&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">op&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">values&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">operands&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">values&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">split&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;, &amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">op&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">operands&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">],&lt;/span> &lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">operands&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">cbi_1&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">register&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bit&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">register&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">sbi_1&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">register&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bit&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">register&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">main&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The flag is: &lt;code>HTB{817_84n91n9_15_3v32ywh323!@#$%}&lt;/code>&lt;/p></description></item><item><title>HTB HW Challenge RFlag</title><link>https://Kvn11.github.io/p/htb-hw-challenge-rflag/</link><pubDate>Thu, 04 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-hw-challenge-rflag/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge RFlag" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: We have found the garage where some cyber criminals have all their stuff.
+Using an SDR device, we captured the signal from the remote key that opens the garage.
+Can you help us to analyze it?&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The challenge zip file contains &lt;code>signal.cf32&lt;/code> which can be opened with inspectrum.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_1.png"
+width="1258"
+height="598"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_1_hu833c2a68a9ff553eddcfc75dd92c4059_1151536_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_1_hu833c2a68a9ff553eddcfc75dd92c4059_1151536_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Opened signal capture"
+class="gallery-image"
+data-flex-grow="210"
+data-flex-basis="504px"
+>&lt;/p>
+&lt;p>We can increase the FFT size, power max, and power min settings to get a more clear view of the signals.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_2.png"
+width="1258"
+height="719"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_2_hu8ef0c633dd5f362bd3828bff3e270cb9_92176_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_2_hu8ef0c633dd5f362bd3828bff3e270cb9_92176_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Better view"
+class="gallery-image"
+data-flex-grow="174"
+data-flex-basis="419px"
+>&lt;/p>
+&lt;p>Then we can right click on the bright signal segments and add an amplitude plot.
+We need to shrink our window to reduce noise.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_3.png"
+width="1919"
+height="1034"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_3_hu7a0d62733e874bd05ec1bc554e21d67a_134230_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_3_hu7a0d62733e874bd05ec1bc554e21d67a_134230_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Amplitude plot"
+class="gallery-image"
+data-flex-grow="185"
+data-flex-basis="445px"
+>&lt;/p>
+&lt;p>Now we right click on our amplitude plot, and select &lt;code>Add derived plot -&amp;gt; add threshold plot&lt;/code> to get our plot of 1&amp;rsquo;s and 0&amp;rsquo;s.
+We also enable the cursors so we can start describing what will determine a 1 and what will determine a 0.
+Then we can increase the amount of cursors until we have covered the entire capture.
+Doesn&amp;rsquo;t need to be perfectly lined up.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_4.png"
+width="1919"
+height="1034"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_4_hu57485597eaf5a9c97f9f439974a8cdbf_724526_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_4_hu57485597eaf5a9c97f9f439974a8cdbf_724526_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Creating our bits"
+class="gallery-image"
+data-flex-grow="185"
+data-flex-basis="445px"
+>&lt;/p>
+&lt;p>To export the bits, we need to right click on the threshold plot, and then select extract symbols to stdout.
+I removed the whitespace and comma&amp;rsquo;s so that I could use it with an online machenster decoding tool.
+You can figure out this is manchester encoded due to the bit patterns.
+The bits are always going from high to low, or low to high, but never high to high or low to low.
+You can use &lt;a class="link" href="https://dcode.fr/manchester-code" target="_blank" rel="noopener"
+>dcode.fr/manchester-code&lt;/a> to decode the bits into their final form.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_5.png"
+width="990"
+height="503"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_5_hue12044070bd80f8d25532e4d8fe338a7_208850_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_5_hue12044070bd80f8d25532e4d8fe338a7_208850_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Manchester decoded"
+class="gallery-image"
+data-flex-grow="196"
+data-flex-basis="472px"
+>&lt;/p>
+&lt;p>After we have the final decoded bits, we can use CyberChef to convert the bits to text.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_6.png"
+width="1140"
+height="534"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_6_huc87c1bdbf6611403c71799c2524e3c4d_40563_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_6_huc87c1bdbf6611403c71799c2524e3c4d_40563_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Flag"
+class="gallery-image"
+data-flex-grow="213"
+data-flex-basis="512px"
+>&lt;/p></description></item><item><title>HTB HW Challenge VHDLock</title><link>https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/</link><pubDate>Wed, 03 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge VHDLock" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: We found ourselves locked in an escape room, with the clock ticking down and only one puzzle to solve.
+The final challenge involves opening the door, and the clue provided to use by the game master is that the key for the encrypted password is a 4-byte sequence.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The challenge download gives us two files &lt;code>lock.vhd&lt;/code> and &lt;code>out.txt&lt;/code>.
+The second file is presumably the output of the first, and contains two columns of values.
+At first glance the first file appears to be a Virtual Hard Disk, but based on the name of the challenge and a quick search of the import &lt;code>use ieee.std_logic_1164.all&lt;/code>, it can be determined that this is a VHDL file.
+If you want to learn more about VHDL files, and how to write/read them, I recommend this playlist:
+&lt;a class="link" href="https://www.youtube.com/watch?v=h4ZXge1BE80" target="_blank" rel="noopener"
+>Your first VHDL Program&lt;/a>.&lt;/p>
+&lt;p>The first part of this file is creating an &lt;code>xor_get&lt;/code> function that takes 2 inputs, each 2 bytes wide, XOR&amp;rsquo;s them, and outputs the 2 byte result to &lt;code>output&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/1.png"
+width="734"
+height="376"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/1_huedba0fb69b937a1a57823c37c7b1e252_119357_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/1_huedba0fb69b937a1a57823c37c7b1e252_119357_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First part of lock.vhd"
+class="gallery-image"
+data-flex-grow="195"
+data-flex-basis="468px"
+>&lt;/p>
+&lt;p>The second component takes in a 4 but value and maps it to a 16 bit value. This value is given to &lt;code>output&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/2.png"
+width="858"
+height="804"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/2_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/2_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Second part of lock.vhd"
+class="gallery-image"
+data-flex-grow="106"
+data-flex-basis="256px"
+>&lt;/p>
+&lt;p>The last component of the file is where the process of generating &lt;code>out.txt&lt;/code> can be explained.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/3.png"
+width="858"
+height="804"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/3_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/3_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Third part of lock.vhd"
+class="gallery-image"
+data-flex-grow="106"
+data-flex-basis="256px"
+>&lt;/p>
+&lt;p>The &lt;code>main&lt;/code> entity describes the inputs we can expect.
+2 4-bit values, along with a 2 byte XOR key, and it will have 2 2-byte outputs, seen in &lt;code>out.txt&lt;/code>.
+Our 2 4-bit values are translated into a 16-bit value, and then those values are XOR&amp;rsquo;d against the unknown key.
+However, given that HackTheBox flags always have the format &lt;code>HTB{...}&lt;/code> we can assume to know the first 4 inputs.
+Since we now know the 2 of the 3 values used in the XOR operation used to generate the outputs, we can derive the 4 byte key using the following process:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">output_1 ^ decoder_4x16(&amp;#34;H&amp;#34;) = 1st byte of key.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">output_2 ^ decoder_4x16(&amp;#34;T&amp;#34;) = 2nd byte of key.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">output_3 ^ decoder_4x16(&amp;#34;B&amp;#34;) = 3rd byte of key.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">output_4 ^ decoder_4x16(&amp;#34;{&amp;#34;) = 4th byte of key.
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Here is the code to generate the key:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python" data-lang="Python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">decoder_4x16&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">dict&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">n&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">n&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">val&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">val&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="ow">or&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="mi">15&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">get_key&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">inputs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">outputs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span>&lt;span class="mi">35&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">307&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">17&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">33&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">33&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">53&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">183&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">2103&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">key&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">c&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="s2">&amp;#34;HTB{&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">inputs&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nb">ord&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="mh">0xf0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;gt;&amp;gt;&lt;/span> &lt;span class="mi">4&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">inputs&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">ord&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="mh">0x0f&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">inputs&lt;/span>&lt;span class="p">)):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">key&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="n">decoder_4x16&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">inputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">])&lt;/span> &lt;span class="o">^&lt;/span> &lt;span class="n">outputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">k&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">key&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;0x&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">k&lt;/span>&lt;span class="si">:&lt;/span>&lt;span class="s2">02X&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">get_key&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>It will output the values:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">0x33
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x33
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x37
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x37
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>From this we know the key to be &lt;code>0x33313137&lt;/code>.
+Now the rest of the challenge is just to reverse the outputs so we can figure out the inputs.
+Here is the code to solve the challenge:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python" data-lang="Python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">encoder_4x16&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">dict&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">n&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">val&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">n&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">val&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">reverse_process&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">key&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span> &lt;span class="mh">0x33&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x31&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x31&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x37&lt;/span> &lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">outputs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">flag&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="nb">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;out.txt&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">as&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">readlines&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">line&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">lines&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">outputs&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">([&lt;/span>&lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">x&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">for&lt;/span> &lt;span class="n">x&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">line&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">strip&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">split&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34; &amp;#34;&lt;/span>&lt;span class="p">)])&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">outputs&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">d1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">encoder_4x16&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="n">outputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">^&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">key&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">d2&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">encoder_4x16&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="n">outputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">^&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">key&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">c&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">d1&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">d2&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">flag&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="nb">chr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">flag&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">reverse_process&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The flag is: &lt;code>HTB{I_L0v3_VHDL_but_LOve_my_5w33thear7_m0re}&lt;/code>.&lt;/p></description></item></channel></rss>

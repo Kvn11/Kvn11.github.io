@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Reverse on Kvn11</title><link>https://Kvn11.github.io/tags/reverse/</link><description>Recent content in Reverse on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Tue, 12 Sep 2023 02:45:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/tags/reverse/index.xml" rel="self" type="application/rss+xml"/><item><title>HTB Iterative Virus</title><link>https://Kvn11.github.io/p/htb-iterative-virus/</link><pubDate>Tue, 12 Sep 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-iterative-virus/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/hackthebox.jpg" alt="Featured image of post HTB Iterative Virus" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: While cleaning up the workspace of a recently retired employee, we noticed that one of the core files of the very important programs they were working on didn&amp;rsquo;t match up with the backups we have of it, could you check it out for us?&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="initial-analysis">Initial Analysis
+&lt;/h2>&lt;p>Upon running the executable, nothing out of the ordinary seemed to happen.
+The &lt;code>.exe&lt;/code> printed &amp;ldquo;Hello World!&amp;rdquo; and exited normally.
+&lt;code>PEBear&lt;/code> showed that there was another strange section in the exe file called &lt;code>.ivir&lt;/code>.
+I made the assumption that this was a reference to &lt;code>I terative VIRus&lt;/code>, and the entry point being in this section further reinforced my theory that this was the &amp;ldquo;virus&amp;rdquo; part of the file.
+The time stamp was set to &lt;code>deadc0de&lt;/code> which was also strange, since that translates to a date well into the future.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_1.png"
+width="1038"
+height="523"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_1_hu35f29c00fe042e3450b010407551f812_42024_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_1_hu35f29c00fe042e3450b010407551f812_42024_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="PE Bear analysis"
+class="gallery-image"
+data-flex-grow="198"
+data-flex-basis="476px"
+>&lt;/p>
+&lt;h2 id="reversing-with-ida-free">Reversing with IDA Free
+&lt;/h2>&lt;p>The first interesting function to look at is one that returns a function name based on a number it is given.
+It uses stack strings to prevent analysis tools from detecting the string as a string.
+We can right click on the hex values to convert them to characters.
+The result name is then passed to another function that seems to return a function pointer.
+This made me think that the exe was dynamically resolving functions.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_2.PNG"
+width="484"
+height="705"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_2_hu0c19397b28ef6f5773be28e20b8e7a0b_37887_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_2_hu0c19397b28ef6f5773be28e20b8e7a0b_37887_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Dynamic Resolving Function 1"
+class="gallery-image"
+data-flex-grow="68"
+data-flex-basis="164px"
+>&lt;/p>
+&lt;p>After we sort through each function call and match up the result, we can see the functions that have been resolved:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_3.PNG"
+width="1426"
+height="340"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_3_hu5aab81d97e2caa4fce51f034348e4220_37172_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_3_hu5aab81d97e2caa4fce51f034348e4220_37172_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Dynamic Resolving Function 2"
+class="gallery-image"
+data-flex-grow="419"
+data-flex-basis="1006px"
+>&lt;/p>
+&lt;p>After these functions have been resolved, there is a value 5 bytes after the entry point that is compared.
+If the value is 5, then a function is called.
+However, this function seems to be broken, encrypted, or heavily obfuscated since the disassembly doesn&amp;rsquo;t seem valid.
+Otherwise, what seems like a key value is chosen and saved.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_4.PNG"
+width="671"
+height="488"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_4_hu97d836c2e9435e68c7c5d6d84c7f93af_18847_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_4_hu97d836c2e9435e68c7c5d6d84c7f93af_18847_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Key Values"
+class="gallery-image"
+data-flex-grow="137"
+data-flex-basis="330px"
+>&lt;/p>
+&lt;p>Then the exe will iterate over all the &lt;code>*.exe&lt;/code> files in its current directory, confirm some checks, and if everything looks good it will perform some actions on the current &lt;code>.exe&lt;/code> file.
+The main check is that the timestamp of the file needs to be set to &lt;code>THIS&lt;/code> otherwise the infection of the file will not take place.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_5.PNG"
+width="733"
+height="279"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_5_hucbbb156f379a41ebc5b60fa14a48910c_24109_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_5_hucbbb156f379a41ebc5b60fa14a48910c_24109_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Infection Checks"
+class="gallery-image"
+data-flex-grow="262"
+data-flex-basis="630px"
+>&lt;/p>
+&lt;p>Most the proceeding infection process isn&amp;rsquo;t super important, and was in fact pretty tedious to look through and rename.
+A new section and section header are added and modified to make sure they adhere to alignment rules, and the rest of the process is just copying over the infection code and making it so it replaces the entry point of the victim file.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_6.PNG"
+width="927"
+height="537"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_6_huc09620f703d3c84eae24ae7156062fe9_62214_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_6_huc09620f703d3c84eae24ae7156062fe9_62214_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Infection Process"
+class="gallery-image"
+data-flex-grow="172"
+data-flex-basis="414px"
+>&lt;/p>
+&lt;p>The end of the process loops over the data from the broken function from earlier, and multiplies it against the key value selected earlier.
+This new modified code is then copied into the victim file.
+Then the byte 5 bytes ahead of the entry point is incremented and copied into the victim file.
+This means when the newly infected victim exe is run, it will use the second key.
+Then the next file to be infected will use the third key, and so on until the 4th iteration when that special byte is set to 5.
+At that point the strange function from earlier runs.
+This implies that after a certain number of infections the strange function reveals itself.
+I verified most of this with dynamic analysis as well, but didn&amp;rsquo;t take any screenshots.
+If you want to verify with a debugger, set a breakpoint after the &lt;code>MapViewOfFile&lt;/code> function and follow it in dump.
+From there you can follow along with the exe code as it checks and modifies different parts of the victim file.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_7.PNG"
+width="870"
+height="136"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_7_hu5bc4ae03addd6b8a46985ebcf02e61a2_10777_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_7_hu5bc4ae03addd6b8a46985ebcf02e61a2_10777_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Decryption Process"
+class="gallery-image"
+data-flex-grow="639"
+data-flex-basis="1535px"
+>&lt;/p>
+&lt;p>I ran the exe in &lt;code>x64Dbg&lt;/code>, and copied out the encrypted code so I could manually decrypt it.
+You could just manipulate the registers to do it all within &lt;code>x64Dbg&lt;/code> but I ran into exceptions doing that so I opted for the python approach.
+Here is the script that decrypts the flag function:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python" data-lang="Python">&lt;span class="line">&lt;span class="cl">&lt;span class="n">code&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0xE25C0FE4937ECD98&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x46943D7D6211854C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x7ED9FD7403244F3B&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0954450DD34BC4FB&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x34738E7E3DC62246&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x382DF5BC3CDDD484&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x138529F69C81C398&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xE9FCF6D4DD85105E&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x5B977D744A5DBD4C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xC2D93D4B963E5C85&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB3DD747A06D5A985&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xD454843DE2F28EBF&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x0215CEB076580EDC&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x3F55D6792852AA4D&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x17AF0A0E48DDD484&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x547EA605BB8640AD&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x243D8A75B199B575&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x27D1C0EDAE5CB998&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x6108284AE5787878&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x7E49F4DF10792485&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0xACD9F651E2F28EBF&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xADA04BA5BA8A1444&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xF77252CAFD2A38C9&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x388BB9FB9D000000&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x8CC468D4A37B0000&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x891DB54E4E4ABD4C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xEFCE883F2C030000&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x399F79C914778100&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0xB5B1F45FAD045A5C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB721A6D9B394FF4C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB0DE9DB43DD7A1B3&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xCC3AF2334A813038&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x3DD6D4E506470273&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x339B093AB6A0F837&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x3E997481AE05CCA5&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x689018943160B8AC&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0xE35AE4EDCF035760&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x6D46B194A1A37B36&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x3619E5691F021894&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0AFD79C343528DEC&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x0F7FEA94A59656C0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x8DAE5CB998000000&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x1770879F9859C398&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x28B283C42B81C398&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x7B7B67D3051D07B1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xBFE4C34F82F76B75&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x1B6CED770BFBA985&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB8E5061F67130000&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x953D7B885F773041&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x1C206CC310CA422A&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x87130CC425BC4A04&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0x6E2368B9C685770B&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_2&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xEB7FD64E061C1A3D&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_3&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xCB8FF2D53D7505A1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_4&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xF1EF554206DCE4D&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">reverse_hex_string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">h&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">h&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">h&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">2&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">result&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">result&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">print_blob&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">v&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">c&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">hex_string&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">v&lt;/span>&lt;span class="si">:&lt;/span>&lt;span class="s2">016X&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="n">reverse_hex_string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">hex_string&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">result&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">end&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\n\n&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">key&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">code&lt;/span>&lt;span class="p">)):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">code&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">code&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">key&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="mh">0xFFFFFFFFFFFFFFFF&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_2&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_3&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_4&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">print_blob&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">code&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Attempting to analyze this decrypted code didn&amp;rsquo;t yield any results, so I figured it required the context of the full program to work successfully.
+At this point I used &lt;code>HxD&lt;/code> to patch the virus exe to overwrite the encrypted code with the decrypted one.
+Then I opened it in IDA and saw that the decrypted code was also resolving more functions dynamically, although these function&amp;rsquo;s aren&amp;rsquo;t too important as the flag is visible in plaintext at this point.
+The functions would open up a message box containing the flag value I think.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_8.PNG"
+width="908"
+height="508"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_8_hub606f63516ba7f29a44885b8f590a99b_47164_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_8_hub606f63516ba7f29a44885b8f590a99b_47164_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Flag"
+class="gallery-image"
+data-flex-grow="178"
+data-flex-basis="428px"
+>&lt;/p>
+&lt;h2 id="lessons-learned">Lessons Learned
+&lt;/h2>&lt;p>I spent much more time on this challenge than I should have.
+A lot of time was wasted on reversing the exact infection process and seeing what fields were being changed in the headers of the victim file.
+I should have focused on the decryption portion and the code surrounding that instead.
+All in all, I think for next time I should focus less on the details and more so on the &amp;ldquo;bigger picture&amp;rdquo; of what the application is doing.&lt;/p></description></item></channel></rss>

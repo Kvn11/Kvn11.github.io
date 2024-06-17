@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Kernel on Kvn11</title><link>https://Kvn11.github.io/categories/kernel/</link><description>Recent content in Kernel on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 19 May 2024 02:45:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/categories/kernel/index.xml" rel="self" type="application/rss+xml"/><item><title>Intro To Kernel Exploitation</title><link>https://Kvn11.github.io/p/intro-to-kernel-exploitation/</link><pubDate>Sun, 19 May 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/intro-to-kernel-exploitation/</guid><description>&lt;img src="https://i.pinimg.com/564x/05/2e/8d/052e8d59f511fd32a620ce1d12da0aa3.jpg" alt="Featured image of post Intro To Kernel Exploitation" />&lt;blockquote>
+&lt;p>Disclaimer: This is an active work in progress, things might be wrong, or might not make sense.
+These are pretty much just notes until I finish and clean it up.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="background-info">Background Info
+&lt;/h2>&lt;h3 id="vuln">Vuln
+&lt;/h3>&lt;p>The vulnerability to exploit today is: &lt;a class="link" href="https://nvd.nist.gov/vuln/detail/CVE-2022-27666" target="_blank" rel="noopener"
+>CVE-2022-27666&lt;/a>.
+I just randomly picked this one out from the &lt;a class="link" href="https://docs.google.com/document/d/1a9uUAISBzw3ur1aLQqKc5JOQLaJYiOP5pe_B4xCT1KA/edit#heading=h.9c6s9d5wfjju" target="_blank" rel="noopener"
+>Google Recipes Notebook&lt;/a>.
+There a few PoC&amp;rsquo;s for this vulnerability online, which is good because if I get stuck at some point, I can take a look, but the goal is to develop an exploit all on my own.
+The advisory says:&lt;/p>
+&lt;blockquote>
+&lt;p>A heap buffer overflow flaw was found in IPsec ESP transformation code in &lt;code>net/ipv4/esp4.c&lt;/code> and &lt;code>net/ipv6/esp6.c&lt;/code>.
+This flaw allows a local attacker with a normal user privilege to overwrite kernel heap objects and may cause a local privilege escalation threat.&lt;/p>
+&lt;/blockquote>
+&lt;p>The vuln appears in the function &lt;code>int esp_output_head(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *esp)&lt;/code>.
+&lt;code>ESP_SKB_FRAG_MAXSIZE&lt;/code> is defined as &lt;code>(PAGE_SIZE &amp;lt;&amp;lt; SKB_FRAG_PAGE_ORDER)&lt;/code>.&lt;/p>
+&lt;p>The commit that is linked in the advisory adds a fix to check whether the len of the &lt;code>skb-&amp;gt;data_len + tailen&lt;/code> is greater than &lt;code>(PAGE_SIZE &amp;lt;&amp;lt; SKB_FRAG_PAGE_ORDER)&lt;/code>.
+This leads to a hardcoded value being set as the len of the buffer to be encrypted, which can then be taken advantage via other memcpy operations.&lt;/p>
+&lt;h3 id="setup">Setup
+&lt;/h3>&lt;p>I recommend you use an Ubuntu VM for this, I had issues developing on Kali.
+We can start by setting up github.
+After you download the linux repo, switch to the vulnerable version / tag with:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">git checkout -b CVE-2022-2766 v5.16
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This will create a branch named &lt;code>CVE-2022-2766&lt;/code> which will contain all the content within the &lt;code>v5.16&lt;/code> commit, which is the last vulnerable version.&lt;/p>
+&lt;p>We can then more or less follow the instructions &lt;a class="link" href="https://kernw0lf.github.io/posts/qemu_debug/" target="_blank" rel="noopener"
+>given here by kernw0lf&lt;/a>.
+Create a default config file with &lt;code>make defconfig&lt;/code>.
+Then we add a few more extra settings to help with debugging:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">CONFIG_KCOV=y
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">CONFIG_DEBUG_INFO=y
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">CONFIG_KASAN=y
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">CONFIG_KASAN_INLINE=y
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">CONFIG_CONFIGFS_FS=y
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">CONFIG_SECURITYFS=y
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Additionally, there are a few other options you have to enable, but for brevity you can access the correct config file at my repo &lt;a class="link" href="https://github.com/" target="_blank" rel="noopener"
+>here&lt;/a>.&lt;/p>
+&lt;p>Then compile with &lt;code>make -j$(nproc)&lt;/code>.
+Next you have to download the ubuntu cloud iso.
+I tried getting this to work with busybox, as I wanted a barebones system so I can focus on just this vulnerability, but after several days of struggling I gave in and opted for this method you&amp;rsquo;ll see below.
+First, download a recent minimal Ubuntu cloud image from &lt;a class="link" href="https://cloud-images.ubuntu.com/minimal/releases/" target="_blank" rel="noopener"
+>here&lt;/a>:&lt;/p>
+&lt;p>Then you need to configure the users, set up ssh keys, etc:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">sudo apt-get install libguestfs-tools
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">virt-customize -a /path/to/ubuntu.img &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --run-command &lt;span class="s1">&amp;#39;apt-get update&amp;#39;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --install ssh-server &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --install strongswan &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --install vim &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --run-command &lt;span class="s1">&amp;#39;systemctl enable ssh&amp;#39;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --root-password password:root &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --ssh-inject root:file:/path/to/root/ssh.pub &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --run-command &lt;span class="s1">&amp;#39;useradd -m -s /bin/bash pwn&amp;#39;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --password pwn:password:abc123 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --ssh-inject pwn:file:/path/to/pwn/ssh.pub &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --copy-in /lib/modules/5.16.0:/lib/modules/
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Then we can run the image like:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#!/bin/bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">qemu-system-x86_64 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -m 2G &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -smp &lt;span class="m">2&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -kernel ./bzImage &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -drive &lt;span class="nv">file&lt;/span>&lt;span class="o">=&lt;/span>./ubuntu-20.10-minimal-cloudimg-amd64.img &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -append &lt;span class="s2">&amp;#34;root=/dev/sda1 rw console=ttyS0&amp;#34;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -nographic &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -netdev user,id&lt;span class="o">=&lt;/span>net0,hostfwd&lt;span class="o">=&lt;/span>tcp::2222-:22 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -device virtio-net,netdev&lt;span class="o">=&lt;/span>net0
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>After logging in, verify that &lt;code>strongswan&lt;/code> is running with:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">systemctl status strongswan-starter
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="networking">Networking
+&lt;/h3>&lt;p>We also need set up IPSec&amp;rsquo;s config on the guest to ensure we are creating IPSEC packets.
+For this purpose I&amp;rsquo;ll create a &amp;ldquo;non-working&amp;rdquo; configuration, but it should be enough for our exploit.
+Add the following files:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;span class="lnt">9
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl"># Added to /etc/ipsec.conf
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">conn local-to-fake
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> left=&amp;lt;qemu ip&amp;gt;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> right=&amp;lt;host ip&amp;gt;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> leftsubnet=&amp;lt;qemu subnet&amp;gt;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> rightsubnet=&amp;lt;host subnet&amp;gt;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> authby=secret
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> auto=start
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl"># Added to /etc/ipsec.secrets
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&amp;lt;qemu ip&amp;gt; &amp;lt;host ip&amp;gt; : PSK &amp;#34;secret&amp;#34;
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Theres a bit more setup still, but basically you have to create a bridged network between qemu and your host, and then assign your qemu instance an IP.
+I will come back later and update this section with the correct config.&lt;/p>
+&lt;p>You can test whether the IPSEC packets are sending with tcpdump:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/1.PNG"
+width="874"
+height="148"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/1_hu9a2e99824327ac25abae96905a31fe54_27960_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/1_hu9a2e99824327ac25abae96905a31fe54_27960_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="ESP Packets captured with tcpdump"
+class="gallery-image"
+data-flex-grow="590"
+data-flex-basis="1417px"
+>&lt;/p>
+&lt;h3 id="struct-esp_info">struct esp_info
+&lt;/h3>&lt;p>This structure manages state information related to the ESP packet processing.
+It&amp;rsquo;s important to understand this structure because we need certain values to be set in order to trigger the vulnerable code down the line.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/esp_info.png"
+width="336"
+height="326"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/esp_info_hu3c716decee474d4070a712a3e9e54e3f_11729_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/esp_info_hu3c716decee474d4070a712a3e9e54e3f_11729_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="include/net/esp.h"
+class="gallery-image"
+data-flex-grow="103"
+data-flex-basis="247px"
+>&lt;/p>
+&lt;p>The important values here are &lt;code>tailen&lt;/code>, &lt;code>tfclen&lt;/code>, &lt;code>plen&lt;/code>, and &lt;code>alen&lt;/code>.
+We need &lt;code>tailen&lt;/code> to be greater than 0, and &lt;code>tailen&lt;/code> is calculated based on these other values.&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>tfclen&lt;/code> = transports format checksum length.&lt;/li>
+&lt;li>&lt;code>plen&lt;/code> = payload length, doesn&amp;rsquo;t include any padding or ESP header / trailer.&lt;/li>
+&lt;li>&lt;code>alen&lt;/code> = &lt;code>authsize&lt;/code> which in our case is 16.&lt;/li>
+&lt;/ul>
+&lt;h3 id="struct-sk_buff">struct sk_buff
+&lt;/h3>&lt;h3 id="struct-xfrm_state">struct xfrm_state
+&lt;/h3>&lt;p>TODO:
+Need to set `tfcpad to a non-zero value&lt;/p>
+&lt;h2 id="techniques">Techniques
+&lt;/h2>&lt;h2 id="poc">PoC
+&lt;/h2>&lt;h2 id="notes">Notes
+&lt;/h2>&lt;h3 id="testing">testing
+&lt;/h3>&lt;p>Once you verify that your IPSEC tunnel is up and running, then continuing in GDB should hit your breakpoint relatively quickly.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/2.PNG"
+width="1382"
+height="402"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/2_hu1d3f2a43cf72bdb7f079548931457122_62639_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/2_hu1d3f2a43cf72bdb7f079548931457122_62639_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt=" esp_output_head has been triggered. "
+class="gallery-image"
+data-flex-grow="343"
+data-flex-basis="825px"
+>&lt;/p>
+&lt;p>We can view the value of our argument of interest with:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">(gdb) print *(struct sk_buff *)&amp;lt;address of sk_buff&amp;gt;
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Now it should be saved in &lt;code>$1&lt;/code>.
+So you can access &lt;code>data_len&lt;/code>, &lt;code>len&lt;/code> and &lt;code>tail_len&lt;/code> the same way you would in c:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">(gdb) p $1-&amp;gt;data_len
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">(gdb) p $1-&amp;gt;len
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">(gdb) p $1-&amp;gt;tailen
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>There is an important distinction to mention here before &lt;code>data_len&lt;/code> and &lt;code>len&lt;/code>.
+&lt;code>Len&lt;/code> is the total size of our buffer.
+&lt;code>data_len&lt;/code> is the paged size of our packet.
+In other words, if our payload is large enough, then we will require it to store in big blocks of memory called &amp;ldquo;pages&amp;rdquo;.
+If it is small enough to store within contiguous memory, then &lt;code>data_len&lt;/code> will be 0 because we don&amp;rsquo;t need to allocate large chunks of memory for it.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/3.PNG"
+width="1830"
+height="420"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/3_hu55927aa20e4b1936546e43d13a3f0d26_118127_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/3_hu55927aa20e4b1936546e43d13a3f0d26_118127_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Viewing the values that create the overflow"
+class="gallery-image"
+data-flex-grow="435"
+data-flex-basis="1045px"
+>&lt;/p>
+&lt;p>I wrote the following program in rust to send a big packet that we can then use to debug and follow the flow in gdb:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-rust" data-lang="rust">&lt;span class="line">&lt;span class="cl">&lt;span class="k">use&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">std&lt;/span>::&lt;span class="n">net&lt;/span>::&lt;span class="n">UdpSocket&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="k">fn&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="w"> &lt;/span>-&amp;gt; &lt;span class="nc">std&lt;/span>::&lt;span class="n">io&lt;/span>::&lt;span class="nb">Result&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="kd">let&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">address&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s">&amp;#34;192.168.246.131:9191&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="kd">let&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">payload&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="fm">format!&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="si">{}{}{}{}&lt;/span>&lt;span class="s">&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="s">&amp;#34;A&amp;#34;&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">repeat&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">),&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="s">&amp;#34;B&amp;#34;&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">repeat&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">),&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="s">&amp;#34;C&amp;#34;&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">repeat&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">),&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="s">&amp;#34;D&amp;#34;&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">repeat&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="p">);&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="kd">let&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">socket&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">UdpSocket&lt;/span>::&lt;span class="n">bind&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;0.0.0.0:7171&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">?&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="n">socket&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">send_to&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">payload&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">as_bytes&lt;/span>&lt;span class="p">(),&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">address&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">?&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="fm">println!&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;[+] Sent payload&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nb">Ok&lt;/span>&lt;span class="p">(())&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="p">}&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>We don&amp;rsquo;t need to receive the packet, we just need to send it over the IPSEC tunnel, and it doesn&amp;rsquo;t matter after that.&lt;/p>
+&lt;p>But write this, have it run continuosly in the background, and eventually you can catch in GDB:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/4.PNG"
+width="1383"
+height="382"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/4_hucf73720dddaff1b72f39e29563a33c92_232608_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/4_hucf73720dddaff1b72f39e29563a33c92_232608_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="41 = A, 42 = B, &amp;hellip;"
+class="gallery-image"
+data-flex-grow="362"
+data-flex-basis="868px"
+>&lt;/p>
+&lt;p>In this case you can see that &lt;code>data_len&lt;/code> is 0.
+This is because our payload is very small.
+So it doesn&amp;rsquo;t require the kernel to allocate pages to accomodate the data.
+Instead if we look at &lt;code>len&lt;/code> we will see that the data is of length &lt;code>156&lt;/code>.&lt;/p>
+&lt;p>I do not know how all the 28 header bytes here are formatted, but if I figure it out, I will come back and update this section.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/usr_packet.png"
+width="327"
+height="961"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/usr_packet_hu86ddfb2dc1a7c28e225c5e327c098637_34150_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/usr_packet_hu86ddfb2dc1a7c28e225c5e327c098637_34150_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Format of non-paginated payload"
+class="gallery-image"
+data-flex-grow="34"
+data-flex-basis="81px"
+>&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/img/vuln_flow.png"
+loading="lazy"
+alt="High level overview"
+>&lt;/p>
+&lt;p>Just creating a massive packet isn&amp;rsquo;t enough to trigger the vulnerability, at least not in my testing.
+There are a few checks that must be passed.&lt;/p>
+&lt;p>A page is &lt;code>0x1000&lt;/code> bytes, or &lt;code>4096&lt;/code> in decimal.
+Another thing to keep in mind, the patch defines the max size as &lt;code>(PAGE_SIZE &amp;lt;&amp;lt; SKB_FRAG_PAGE_ORDER)&lt;/code>, and from the source code we can figure out that &lt;code>SKB_FRAG_PAGE_ORDER&lt;/code> is &lt;code>15&lt;/code>.
+So the max size here is:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">(4096 &amp;lt;&amp;lt; 15) = 0x8000000 bytes
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>We also have to account for the &lt;code>28&lt;/code> bytes of header probably.
+Anyways, tracking the &lt;code>allocsize&lt;/code> variable in &lt;code>esp_output_head&lt;/code>, we see that it gets used in &lt;code>skb_page_frag_refill&lt;/code>.
+We can ignore the &lt;code>unlikely()&lt;/code> that wraps it, this is just an optimization.&lt;/p>
+&lt;p>&lt;code>skb_page_frag_refill&lt;/code> is defined in &lt;code>/net/core/sock.c&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">bool&lt;/span> &lt;span class="nf">skb_page_frag_refill&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">unsigned&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">sz&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">page_frag&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">gfp_t&lt;/span> &lt;span class="n">gfp&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nf">page_ref_count&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">offset&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">true&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">offset&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">sz&lt;/span> &lt;span class="o">&amp;lt;=&lt;/span> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">size&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">true&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">put_page&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">offset&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">SKB_FRAG_PAGE_ORDER&lt;/span> &lt;span class="o">&amp;amp;&amp;amp;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">!&lt;/span>&lt;span class="nf">static_branch_unlikely&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">net_high_order_alloc_disable_key&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="cm">/* Avoid direct reclaim but allow kswapd to wake */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">alloc_pages&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="n">gfp&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="o">~&lt;/span>&lt;span class="n">__GFP_DIRECT_RECLAIM&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">|&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">__GFP_COMP&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">__GFP_NOWARN&lt;/span> &lt;span class="o">|&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">__GFP_NORETRY&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SKB_FRAG_PAGE_ORDER&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nf">likely&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">size&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">PAGE_SIZE&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="n">SKB_FRAG_PAGE_ORDER&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">true&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">alloc_page&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">gfp&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nf">likely&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">page&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pfrag&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">size&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">PAGE_SIZE&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">true&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">false&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Here is where things start to get interesting.
+Notice the calls to &lt;code>alloc_pages()&lt;/code>.
+This &lt;a class="link" href="https://www.kernel.org/doc/gorman/html/understand/understand023.html" target="_blank" rel="noopener"
+>function takes 2 values&lt;/a>, a mask, and an order.
+The order determines the size of the allocation.
+The number of pages to be allocated will be &lt;code>2 ^ order&lt;/code>.
+I determined previously that &lt;code>SKB_FRAG_PAGE_ORDER&lt;/code> was 15, so at max, the first potential call to &lt;code>alloc_pages&lt;/code> will allocate enough pages to accomodate
+32768 bytes, which is 8 pages.
+Then, the size is set to &lt;code>0x8000000&lt;/code> within the pointer to the &lt;code>page_frag&lt;/code> that &lt;code>esp_output_head&lt;/code> passed in.
+So to summarize, now &lt;code>&amp;amp;x-&amp;gt;xfrag-&amp;gt;size&lt;/code> is &lt;code>0x0x8000000&lt;/code>, and &lt;code>&amp;amp;x-&amp;gt;xfrag-&amp;gt;page&lt;/code> points to the 8 pages that were allocated to us.
+However, I still haven&amp;rsquo;t found the actual operation that writes to this buffer.&lt;/p>
+&lt;p>This structure holds information about the IPSEC state, but more importantly it holds the buffer that our packet data will be written into.
+You can find more information in &lt;code>/include/net/xfrm.h&lt;/code>.&lt;/p>
+&lt;p>Around this point is where I ran into an issue.
+Even though I had a big payload, I was unable to enter the code that created the default size allocation.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nf">skb_cloned&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">skb&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/sk_buff.png"
+width="1122"
+height="1126"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/sk_buff_hu95069e35d7ef0498a00c596132862ed6_99287_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/sk_buff_hu95069e35d7ef0498a00c596132862ed6_99287_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="from /include/linux/skbuff.h"
+class="gallery-image"
+data-flex-grow="99"
+data-flex-basis="239px"
+>&lt;/p>
+&lt;p>The buffer cannot be generated with &lt;code>skb_cloned()&lt;/code> and is not one of multiple shared copies of the buffer.
+Cloned buffers are shared data so must not be written to under normal circumstances.
+There are a lot of situations in which an &lt;code>skb&lt;/code> might get cloned, and during testing, I was able to get past this check fairly often, so I didn&amp;rsquo;t come up with a specific strategy hear other than run and pray.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">tailen&lt;/span> &lt;span class="o">&amp;lt;=&lt;/span> &lt;span class="nf">skb_tailroom&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">skb&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;code>skb_tailroom&lt;/code> will return 0 if the data of &lt;code>skb&lt;/code> paginated, when happens for big payloads.
+Since we need our payload to be big and paginated, then we must ensure that &lt;code>esp-&amp;gt;tailen&lt;/code> is GREATER 0, otherwise entering this branch will not allocate the buffer we need.
+The &lt;code>tailen&lt;/code> value represents the length of the &lt;code>ESP&lt;/code> trailer in an &lt;code>ESP&lt;/code> packet.
+This means that this check should often be easy to pass, as there should always be info attached to an &lt;code>ESP&lt;/code> packet.
+TODO: verify this statement&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/esp_info.png"
+width="336"
+height="326"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/esp_info_hu3c716decee474d4070a712a3e9e54e3f_11729_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/esp_info_hu3c716decee474d4070a712a3e9e54e3f_11729_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="from /include/net/esp.h"
+class="gallery-image"
+data-flex-grow="103"
+data-flex-basis="247px"
+>&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span> &lt;span class="k">else&lt;/span> &lt;span class="k">if&lt;/span> &lt;span class="p">((&lt;/span>&lt;span class="nf">skb_shinfo&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">skb&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">nr_frag&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="n">MAX_SKB_FRAGS&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> &lt;span class="o">!&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">skb_has_frag_list&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">skb&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>We want this to evaluate to true.
+From my testing, it seemed that this one was the most problematic.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/skb_shared_info.png"
+width="703"
+height="535"
+srcset="https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/skb_shared_info_hu7ec2e6a1c53ce9adc755bf268d1a9bfd_39293_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/intro-to-kernel-exploitation/img/skb_shared_info_hu7ec2e6a1c53ce9adc755bf268d1a9bfd_39293_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="from /include/linux/skbuff.h"
+class="gallery-image"
+data-flex-grow="131"
+data-flex-basis="315px"
+>&lt;/p>
+&lt;p>&lt;code>skb_shinfo&lt;/code> will return the &lt;code>skb&lt;/code> endpointer, which could be &lt;code>skb-&amp;gt;head + skb-&amp;gt;end&lt;/code> or &lt;code>skb-&amp;gt;end&lt;/code>.
+Eitherway, it will be of type &lt;code>skb_shared_info&lt;/code>, and we need the &lt;code>nr_frag&lt;/code> value to be less than &lt;code>MAX_SKB_FRAGS = #define MAX_SKB_FRAGS (65536/PAGE_SIZE + 1)&lt;/code> (from &lt;code>/include/linux/skbuff.h&lt;/code>).
+The actual value will be &lt;code>65536 / 0x1000 + 1 = 17&lt;/code>.
+So we do have a max size for our payload, since we don&amp;rsquo;t want it to be split into 17 fragments.
+Additionally, this structure cannot have a frag list, which means that it must not be fragmented at all.
+This is a tough check, because a packet will be fragmented if it exceeds an interface&amp;rsquo;s MTU, which our large payload is likely to do.
+But maybe I don&amp;rsquo;t have to pass this check right away?
+Maybe if the same &lt;code>xfrm_state&lt;/code> object is used, then I can create a small packet that passes the checks, and then come back to create another packet that gets copied into the allocated pages?
+TODO:
+Check if same &lt;code>xfrm_state&lt;/code> is used.&lt;/p></description></item></channel></rss>
