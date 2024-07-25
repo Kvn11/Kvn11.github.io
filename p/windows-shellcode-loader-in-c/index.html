@@ -1,0 +1,200 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Writing a loader for use in OSCP using lessons learned from MalDev Academy"><title>Windows Shellcode Loader in C</title>
+<link rel=canonical href=https://Kvn11.github.io/p/windows-shellcode-loader-in-c/><link rel=stylesheet href=/scss/style.min.0304c6baf04e01a8fe70693791cb744d56a3578a3120a8796cefc66825aa39c7.css><meta property='og:title' content="Windows Shellcode Loader in C"><meta property='og:description' content="Writing a loader for use in OSCP using lessons learned from MalDev Academy"><meta property='og:url' content='https://Kvn11.github.io/p/windows-shellcode-loader-in-c/'><meta property='og:site_name' content='Kvn11'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='malware'><meta property='article:tag' content='windows'><meta property='article:published_time' content='2023-10-20T02:45:01-07:00'><meta property='article:modified_time' content='2023-10-20T02:45:01-07:00'><meta property='og:image' content='https://Kvn11.github.io/p/windows-shellcode-loader-in-c/img/cover.png'><meta name=twitter:title content="Windows Shellcode Loader in C"><meta name=twitter:description content="Writing a loader for use in OSCP using lessons learned from MalDev Academy"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://Kvn11.github.io/p/windows-shellcode-loader-in-c/img/cover.png'><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hudbb421f81ae9f6f59107818afbf2d835_34334_300x0_resize_q75_box.JPG width=300 height=300 class=site-logo loading=lazy alt=Avatar></a></figure><div class=site-meta><h1 class=site-name><a href=/>Kvn11</a></h1><h2 class=site-description>Trying to become IRL netrunner</h2></div></header><ol class=menu-social><li><a href=https://github.com/Kvn11 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/links/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>Links</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#opening-thoughts>Opening Thoughts</a></li><li><a href=#design>Design</a></li><li><a href=#hells-gate>Hell&rsquo;s Gate</a></li><li><a href=#early-bird-apc-injection>Early Bird APC Injection</a></li><li><a href=#anti-sandbox>Anti-Sandbox</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/windows-shellcode-loader-in-c/><img src=/p/windows-shellcode-loader-in-c/img/cover_hu2b7ef2eb33007bfd8f3ce0e8fba06270_1162734_800x0_resize_box_3.png srcset="/p/windows-shellcode-loader-in-c/img/cover_hu2b7ef2eb33007bfd8f3ce0e8fba06270_1162734_800x0_resize_box_3.png 800w, /p/windows-shellcode-loader-in-c/img/cover_hu2b7ef2eb33007bfd8f3ce0e8fba06270_1162734_1600x0_resize_box_3.png 1600w" width=800 height=489 loading=lazy alt="Featured image of post Windows Shellcode Loader in C"></a></div><div class=article-details><header class=article-category><a href=/categories/malware/>Malware</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/windows-shellcode-loader-in-c/>Windows Shellcode Loader in C</a></h2><h3 class=article-subtitle>Writing a loader for use in OSCP using lessons learned from MalDev Academy</h3></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Oct 20, 2023</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>5 minute read</time></div></footer></div></header><section class=article-content><h2 id=opening-thoughts>Opening Thoughts</h2><p>Over the past couple months I have gone through the Zero2Automated malware RE course, and the Malware Development course from MalDev Academy.
+The malware RE course is pretty easy to practice as there are plenty of samples and challenges online to reverse, but finding a challenge for malware development is a bit trickier.
+Fortunately, I ran into some problems while studying for the OSCP exam and doing HackTheBox.
+Many of the boxes running Windows 10 were able to detect <code>msfvenom</code>, mimikatz, and other malicous powershell scripts which made it very difficult to get a reverse shell on what should have been very simple boxes.
+The OSCP teaches to use <code>Shellter</code>, but even this tool was failing to bypass Defender.
+At this point I figured it&rsquo;d be a good investment to build my own loader so that I wouldn&rsquo;t ever have to worry about this issue again.
+I had actually done this project once in C++, but hindsight is 20/20 and I arrived at the conclusion that writing it in C is the best option.
+My reasoning is that a loader isn&rsquo;t super complicated, so the organization and object oriented approach that C++ offers doesn&rsquo;t really offer any benefit.
+And the added overhead from C++ just makes the final executable larger.
+Since I&rsquo;ll be working on boxes where the network bandwidth isn&rsquo;t great, a small and portable executable is better.</p><h2 id=design>Design</h2><p>I was talking to this one person who&rsquo;s been developing game cheats for over 10 years and he told me that all you really need is memory injection and streaming relocations.
+Streaming relocations is a bit overkill for this project, so I&rsquo;ll skip that but the injection is definitely optimal.
+In the first version I had used APC injection, and ran into issues with my shell dying once the original process terminated.
+I&rsquo;m sure I could fix it, but since this is supposed to be an improvement over my <code>1.0</code> loader I want to go with remote APC injection, aka Early Bird APC injection.
+I will also need a quick and easy way of hashing strings, and encrypting my <code>msfvenom</code> payloads.
+For these requirments I&rsquo;ll just use the same code snippets as taught in the MalDev course since crypto isn&rsquo;t one of my strengths.</p><h2 id=hells-gate>Hell&rsquo;s Gate</h2><p>Window&rsquo;s syscall&rsquo;s are the API&rsquo;s that carry out the actions when a WinAPI is called.
+The example given in the course is that <code>VirtualAlloc</code> and <code>VirtualAllocEx</code> use the <code>NtAllocateVirtualMemory</code> to carry out their actions.
+All the syscalls return an <code>NTSTATUS</code> value that indicates an error code.
+We can use the following docs since most syscalls aren&rsquo;t documented by Microsoft:</p><ul><li><a class=link href=https://web.archive.org/web/20230401045934/http://undocumented.ntinternals.net/ target=_blank rel=noopener>Undocumented NTInternals</a></li><li><a class=link href=https://doxygen.reactos.org/dir_a7ad942ac829d916497d820c4a26c555.html target=_blank rel=noopener>ReactOS&rsquo;s NTDLL Reference</a></li></ul><p>The main advantage to using syscalls is that we can evade hooked WinAPI.
+Syscalls will have the following structure:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-asm data-lang=asm><span class=line><span class=cl><span class=nf>mov</span> <span class=no>r10</span><span class=p>,</span> <span class=no>rcx</span>
+</span></span><span class=line><span class=cl><span class=nf>mov</span> <span class=no>eax</span><span class=p>,</span> <span class=no>SSN</span>
+</span></span><span class=line><span class=cl><span class=nf>syscall</span>
+</span></span></code></pre></td></tr></table></div></div><p>SSN referes to the syscall service number that the kernel uses to distinguish one syscall from another.
+It&rsquo;s important to note that these values will differ for the same syscall across different OS and OS versions.</p><p>Hell&rsquo;s Gate is a technique that can read through <code>ntdll.dll</code> to find and execute syscalls.
+It&rsquo;s a pretty complex technique that I won&rsquo;t go over here since that isn&rsquo;t the purpose of this post.
+But you can read about it <a class=link href=https://vxug.fakedoma.in/papers/VXUG/Exclusive/HellsGate.pdf target=_blank rel=noopener>here</a>.
+We can follow the guidance in that paper to get the technique working.
+Long story short, we will add a <code>VX_TABLE_ENTRY</code> to our <code>VX_TABLE</code> for every syscall we want to use:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>typedef</span> <span class=k>struct</span> <span class=n>_VX_TABLE_ENTRY</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>pAddress</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>DWORD</span> <span class=n>dwHash</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>WORD</span>  <span class=n>wSystemCall</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span> <span class=n>VX_TABLE_ENTRY</span><span class=p>,</span> <span class=o>*</span> <span class=n>PVX_TABLE_ENTRY</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>typedef</span> <span class=k>struct</span> <span class=n>_VX_TABLE</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>VX_TABLE_ENTRY</span> <span class=n>NtCreateUserProcess</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>VX_TABLE_ENTRY</span> <span class=o>&lt;</span><span class=n>some_syscall</span><span class=o>&gt;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>This table will be populated via the <code>GetVxTableEntry(...)</code> function given in the paper.</p><p>Then <code>HellsGate</code> function just loads up the correct SSN to be called, and then <code>HellDescent</code> actually makes the call:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=nf>HellsGate</span><span class=p>(</span><span class=n>g_Sys</span><span class=p>.</span><span class=n>NtSyscallEntry</span><span class=p>.</span><span class=n>wSystemCall</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=nf>HellDescent</span><span class=p>(</span><span class=n>arg1</span><span class=p>,</span> <span class=n>arg2</span><span class=p>,</span> <span class=n>arg3</span><span class=p>,</span> <span class=p>...);</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=early-bird-apc-injection>Early Bird APC Injection</h2><p><a class=link href=https://learn.microsoft.com/en-us/windows/win32/sync/asynchronous-procedure-calls target=_blank rel=noopener>Asynchronous Procedure Calls</a> (APC&rsquo;s) are functions that execute async in the context of a specific thread.
+We can queue an APC to a thread, and the next time the thread is scheduled, it will run the APC function.
+In order to run an APC generated by an application, the thread we use must be in an alertable state, which just means that it is in a &ldquo;wait&rdquo; state.
+The early bird part of this technique just refers to a remote process instead of the local one.
+So we would do the following:</p><ol><li>Spawn process in suspended state.</li><li>Write payload to address space of suspended process.</li><li>Get a handle to the suspended thread.</li><li>Pass in address of payload new address, and handle to <code>QueueUserAPC</code>.</li><li>Resume thread and wait for payload to run.</li></ol><p>Something interesting to note is that normally you&rsquo;d spawn the process like this:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=n>BOOL</span> <span class=nf>CreateProcessA</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPCSTR</span>                <span class=n>lpApplicationName</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPSTR</span>                 <span class=n>lpCommandLine</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPSECURITY_ATTRIBUTES</span> <span class=n>lpProcessAttributes</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPSECURITY_ATTRIBUTES</span> <span class=n>lpThreadAttributes</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>BOOL</span>                  <span class=n>bInheritHandles</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>DWORD</span>                 <span class=n>dwCreationFlags</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPVOID</span>                <span class=n>lpEnvironment</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPCSTR</span>                <span class=n>lpCurrentDirectory</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPSTARTUPINFOA</span>        <span class=n>lpStartupInfo</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>LPPROCESS_INFORMATION</span> <span class=n>lpProcessInformation</span>
+</span></span><span class=line><span class=cl><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nf>CreateProcessA</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span> 
+</span></span><span class=line><span class=cl>    <span class=n>lpPath</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>FALSE</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>DEBUG_PROCESS</span> <span class=c1>// dwCreationFlags,
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=o>&amp;</span><span class=n>StartupInfo</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=o>&amp;</span><span class=n>ProcInfo</span><span class=p>)</span>
+</span></span></code></pre></td></tr></table></div></div><p>However I am using the syscall <code>NtCreateUserProcess</code>, so I need to use a slightly different calling convention.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=cp>#define THREAD_CREATE_FLAGS_CREATE_SUSPENDED 0x00000001 </span><span class=c1>// NtCreateUserProcess &amp; NtCreateThreadEx
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=nf>HellsGate</span><span class=p>(</span><span class=n>g_Sys</span><span class=p>.</span><span class=n>NtCreateUserProcess</span><span class=p>.</span><span class=n>wSystemCall</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=nf>HellDescent</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=n>hProcess</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>hThread</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PROCESS_ALL_ACCESS</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nb>NULL</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>THREAD_CREATE_FLAGS_CREATE_SUSPENDED</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>UppProcessParameters</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=o>&amp;</span><span class=n>psCreateInfo</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>pAttributeList</span>
+</span></span><span class=line><span class=cl><span class=p>);</span>
+</span></span></code></pre></td></tr></table></div></div><p>To learn more about how <code>NtCreateUserProcess</code> works I recommend this <a class=link href=https://captmeelo.com/redteam/maldev/2022/05/10/ntcreateuserprocess.html target=_blank rel=noopener>blog</a>.</p><p>Now we just write our payload into the memory space of this process.
+For this, we need to update our syscall table structure with 3 more syscalls:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>typedef</span> <span class=nf>NTSTATUS</span><span class=p>(</span><span class=n>NTAPI</span><span class=o>*</span> <span class=n>fnNtAllocateVirtualMemory</span><span class=p>)(</span>
+</span></span><span class=line><span class=cl>    <span class=n>HANDLE</span>      <span class=n>ProcessHandle</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span><span class=o>*</span>      <span class=n>BaseAddress</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG_PTR</span>   <span class=n>ZeroBits</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PSIZE_T</span>     <span class=n>RegionSize</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>       <span class=n>AllocationType</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>       <span class=n>Protect</span><span class=p>,</span>
+</span></span><span class=line><span class=cl><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=k>typedef</span> <span class=nf>NTSTATUS</span><span class=p>(</span><span class=n>NTAPI</span><span class=o>*</span> <span class=n>fnNtProtectVirtualMemory</span><span class=p>)(</span>
+</span></span><span class=line><span class=cl>    <span class=n>HANDLE</span>  <span class=n>ProcessHandle</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span><span class=o>*</span>  <span class=n>BaseAddress</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PULONG</span>  <span class=n>NumberOfBytesToProtect</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>   <span class=n>NewAccessProtection</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PULONG</span>  <span class=n>OldAccesProtection</span>
+</span></span><span class=line><span class=cl><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=k>typedef</span> <span class=nf>NTSTATUS</span><span class=p>(</span><span class=n>NTAPI</span><span class=o>*</span> <span class=n>fnNtWriteVirtualMemory</span><span class=p>)(</span>
+</span></span><span class=line><span class=cl>    <span class=n>HANDLE</span>  <span class=n>ProcessHandle</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>   <span class=n>BaseAddress</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>   <span class=n>Buffer</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>   <span class=n>NumberOfBytesToWrite</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>PULONG</span>  <span class=n>NumberOfBytesWritten</span>
+</span></span><span class=line><span class=cl><span class=p>);</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=anti-sandbox>Anti-Sandbox</h2></section><footer class=article-footer><section class=article-tags><a href=/tags/malware/>Malware</a>
+<a href=/tags/windows/>Windows</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/pikabot-malware-analysis/><div class=article-image><img src=/p/pikabot-malware-analysis/img/cover.c53bf014814f414dc626c31bcf6ee6e8_hu7e43340f20ef237573ca21eeae8912fa_89734_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post Pikabot malware analysis" data-hash="md5-xTvwFIFPQU3GJsMbz27m6A=="></div><div class=article-details><h2 class=article-title>Pikabot malware analysis</h2></div></a></article><article class=has-image><a href=/p/icedid-malware-config-extraction/><div class=article-image><img src=/p/icedid-malware-config-extraction/img/cover.10b4a15bf7df9e4d5659fe7c13589b56_hu2a9a7507b16ac1277fd064f96fac5ec6_49860_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post IcedID Malware config extraction" data-hash="md5-ELShW/ffnk1WWf58E1ibVg=="></div><div class=article-details><h2 class=article-title>IcedID Malware config extraction</h2></div></a></article><article class=has-image><a href=/p/gozi-malware-unpacking-and-config-extraction/><div class=article-image><img src=/p/gozi-malware-unpacking-and-config-extraction/img/cover.f6c29aa98da4ac391fbba7cc20cf8437_hufd045887b53cb3360ed141f9d234bb22_75842_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post Gozi malware unpacking and config extraction" data-hash="md5-9sKaqY2krDkfu6fMIM+ENw=="></div><div class=article-details><h2 class=article-title>Gozi malware unpacking and config extraction</h2></div></a></article><article class=has-image><a href=/p/htb-rev-challenge-ffmodule/><div class=article-image><img src=/p/htb-rev-challenge-ffmodule/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB REV Challenge FFModule" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB REV Challenge FFModule</h2></div></a></article><article class=has-image><a href=/p/htb-iterative-virus/><div class=article-image><img src=/p/htb-iterative-virus/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB Iterative Virus" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB Iterative Virus</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//https-kvn11-github-io.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2024 Kvn11</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.26.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

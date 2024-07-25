@@ -1,0 +1,172 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Solution for the HackTheBox Hardware Challenge VHDLock"><title>HTB HW Challenge VHDLock</title>
+<link rel=canonical href=https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/><link rel=stylesheet href=/scss/style.min.0304c6baf04e01a8fe70693791cb744d56a3578a3120a8796cefc66825aa39c7.css><meta property='og:title' content="HTB HW Challenge VHDLock"><meta property='og:description' content="Solution for the HackTheBox Hardware Challenge VHDLock"><meta property='og:url' content='https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/'><meta property='og:site_name' content='Kvn11'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='hardware'><meta property='article:tag' content='htb'><meta property='article:tag' content='easy'><meta property='article:published_time' content='2023-05-03T02:45:01-07:00'><meta property='article:modified_time' content='2023-05-03T02:45:01-07:00'><meta property='og:image' content='https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/hackthebox.jpg'><meta name=twitter:title content="HTB HW Challenge VHDLock"><meta name=twitter:description content="Solution for the HackTheBox Hardware Challenge VHDLock"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/hackthebox.jpg'><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hudbb421f81ae9f6f59107818afbf2d835_34334_300x0_resize_q75_box.JPG width=300 height=300 class=site-logo loading=lazy alt=Avatar></a></figure><div class=site-meta><h1 class=site-name><a href=/>Kvn11</a></h1><h2 class=site-description>Trying to become IRL netrunner</h2></div></header><ol class=menu-social><li><a href=https://github.com/Kvn11 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/links/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>Links</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#walkthrough>Walkthrough</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/htb-hw-challenge-vhdlock/><img src=/p/htb-hw-challenge-vhdlock/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_800x0_resize_q75_box.jpg srcset="/p/htb-hw-challenge-vhdlock/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_800x0_resize_q75_box.jpg 800w, /p/htb-hw-challenge-vhdlock/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_1600x0_resize_q75_box.jpg 1600w" width=800 height=450 loading=lazy alt="Featured image of post HTB HW Challenge VHDLock"></a></div><div class=article-details><header class=article-category><a href=/categories/hackthebox/>HackTheBox</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/htb-hw-challenge-vhdlock/>HTB HW Challenge VHDLock</a></h2><h3 class=article-subtitle>Solution for the HackTheBox Hardware Challenge VHDLock</h3></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>May 03, 2023</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>4 minute read</time></div></footer></div></header><section class=article-content><blockquote><p><strong>Challenge Description</strong>: We found ourselves locked in an escape room, with the clock ticking down and only one puzzle to solve.
+The final challenge involves opening the door, and the clue provided to use by the game master is that the key for the encrypted password is a 4-byte sequence.</p></blockquote><h2 id=walkthrough>Walkthrough</h2><p>The challenge download gives us two files <code>lock.vhd</code> and <code>out.txt</code>.
+The second file is presumably the output of the first, and contains two columns of values.
+At first glance the first file appears to be a Virtual Hard Disk, but based on the name of the challenge and a quick search of the import <code>use ieee.std_logic_1164.all</code>, it can be determined that this is a VHDL file.
+If you want to learn more about VHDL files, and how to write/read them, I recommend this playlist:
+<a class=link href="https://www.youtube.com/watch?v=h4ZXge1BE80" target=_blank rel=noopener>Your first VHDL Program</a>.</p><p>The first part of this file is creating an <code>xor_get</code> function that takes 2 inputs, each 2 bytes wide, XOR&rsquo;s them, and outputs the 2 byte result to <code>output</code>.</p><p><img src=/p/htb-hw-challenge-vhdlock/img/1.png width=734 height=376 srcset="/p/htb-hw-challenge-vhdlock/img/1_huedba0fb69b937a1a57823c37c7b1e252_119357_480x0_resize_box_3.png 480w, /p/htb-hw-challenge-vhdlock/img/1_huedba0fb69b937a1a57823c37c7b1e252_119357_1024x0_resize_box_3.png 1024w" loading=lazy alt="First part of lock.vhd" class=gallery-image data-flex-grow=195 data-flex-basis=468px></p><p>The second component takes in a 4 but value and maps it to a 16 bit value. This value is given to <code>output</code>.</p><p><img src=/p/htb-hw-challenge-vhdlock/img/2.png width=858 height=804 srcset="/p/htb-hw-challenge-vhdlock/img/2_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_480x0_resize_box_3.png 480w, /p/htb-hw-challenge-vhdlock/img/2_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_1024x0_resize_box_3.png 1024w" loading=lazy alt="Second part of lock.vhd" class=gallery-image data-flex-grow=106 data-flex-basis=256px></p><p>The last component of the file is where the process of generating <code>out.txt</code> can be explained.</p><p><img src=/p/htb-hw-challenge-vhdlock/img/3.png width=858 height=804 srcset="/p/htb-hw-challenge-vhdlock/img/3_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_480x0_resize_box_3.png 480w, /p/htb-hw-challenge-vhdlock/img/3_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_1024x0_resize_box_3.png 1024w" loading=lazy alt="Third part of lock.vhd" class=gallery-image data-flex-grow=106 data-flex-basis=256px></p><p>The <code>main</code> entity describes the inputs we can expect.
+2 4-bit values, along with a 2 byte XOR key, and it will have 2 2-byte outputs, seen in <code>out.txt</code>.
+Our 2 4-bit values are translated into a 16-bit value, and then those values are XOR&rsquo;d against the unknown key.
+However, given that HackTheBox flags always have the format <code>HTB{...}</code> we can assume to know the first 4 inputs.
+Since we now know the 2 of the 3 values used in the XOR operation used to generate the outputs, we can derive the 4 byte key using the following process:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>output_1 ^ decoder_4x16(&#34;H&#34;) = 1st byte of key.
+</span></span><span class=line><span class=cl>output_2 ^ decoder_4x16(&#34;T&#34;) = 2nd byte of key.
+</span></span><span class=line><span class=cl>output_3 ^ decoder_4x16(&#34;B&#34;) = 3rd byte of key.
+</span></span><span class=line><span class=cl>output_4 ^ decoder_4x16(&#34;{&#34;) = 4th byte of key.
+</span></span></code></pre></td></tr></table></div></div><p>Here is the code to generate the key:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-Python data-lang=Python><span class=line><span class=cl><span class=ch>#!/usr/bin/python3</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>decoder_4x16</span><span class=p>(</span><span class=n>signal</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>cases</span> <span class=o>=</span> <span class=nb>dict</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>val</span> <span class=o>=</span> <span class=mi>1</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>n</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=mi>16</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>cases</span><span class=p>[</span><span class=n>n</span><span class=p>]</span> <span class=o>=</span> <span class=n>val</span>
+</span></span><span class=line><span class=cl>        <span class=n>val</span> <span class=o>=</span> <span class=n>val</span> <span class=o>&lt;&lt;</span> <span class=mi>1</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>signal</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=ow>or</span> <span class=p>(</span><span class=n>signal</span> <span class=o>&gt;</span> <span class=mi>15</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=mi>0</span>
+</span></span><span class=line><span class=cl>    <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=n>cases</span><span class=p>[</span><span class=n>signal</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>get_key</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>    <span class=n>inputs</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>    <span class=n>outputs</span> <span class=o>=</span> <span class=p>[</span><span class=mi>35</span><span class=p>,</span> <span class=mi>307</span><span class=p>,</span> <span class=mi>17</span><span class=p>,</span> <span class=mi>33</span><span class=p>,</span> <span class=mi>33</span><span class=p>,</span> <span class=mi>53</span><span class=p>,</span> <span class=mi>183</span><span class=p>,</span> <span class=mi>2103</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>    <span class=n>key</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>c</span> <span class=ow>in</span> <span class=s2>&#34;HTB{&#34;</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>inputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span> <span class=p>(</span><span class=nb>ord</span><span class=p>(</span><span class=n>c</span><span class=p>)</span> <span class=o>&amp;</span> <span class=mh>0xf0</span><span class=p>)</span> <span class=o>&gt;&gt;</span> <span class=mi>4</span> <span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>inputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span> <span class=nb>ord</span><span class=p>(</span><span class=n>c</span><span class=p>)</span> <span class=o>&amp;</span> <span class=mh>0x0f</span> <span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>i</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=nb>len</span><span class=p>(</span><span class=n>inputs</span><span class=p>)):</span>
+</span></span><span class=line><span class=cl>        <span class=n>key</span><span class=o>.</span><span class=n>append</span><span class=p>(</span> <span class=n>decoder_4x16</span><span class=p>(</span><span class=n>inputs</span><span class=p>[</span><span class=n>i</span><span class=p>])</span> <span class=o>^</span> <span class=n>outputs</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>k</span> <span class=ow>in</span> <span class=n>key</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=nb>print</span><span class=p>(</span><span class=sa>f</span><span class=s2>&#34;0x</span><span class=si>{</span><span class=n>k</span><span class=si>:</span><span class=s2>02X</span><span class=si>}</span><span class=s2>&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>get_key</span><span class=p>()</span>
+</span></span></code></pre></td></tr></table></div></div><p>It will output the values:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>0x33
+</span></span><span class=line><span class=cl>0x33
+</span></span><span class=line><span class=cl>0x31
+</span></span><span class=line><span class=cl>0x31
+</span></span><span class=line><span class=cl>0x31
+</span></span><span class=line><span class=cl>0x31
+</span></span><span class=line><span class=cl>0x37
+</span></span><span class=line><span class=cl>0x37
+</span></span></code></pre></td></tr></table></div></div><p>From this we know the key to be <code>0x33313137</code>.
+Now the rest of the challenge is just to reverse the outputs so we can figure out the inputs.
+Here is the code to solve the challenge:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-Python data-lang=Python><span class=line><span class=cl><span class=ch>#!/usr/bin/python3</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>encoder_4x16</span><span class=p>(</span><span class=n>signal</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>cases</span> <span class=o>=</span> <span class=nb>dict</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>val</span> <span class=o>=</span> <span class=mi>1</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>n</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=mi>16</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>cases</span><span class=p>[</span><span class=n>val</span><span class=p>]</span> <span class=o>=</span> <span class=n>n</span>
+</span></span><span class=line><span class=cl>        <span class=n>val</span> <span class=o>=</span> <span class=n>val</span> <span class=o>&lt;&lt;</span> <span class=mi>1</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>cases</span><span class=p>[</span><span class=n>signal</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>reverse_process</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>    <span class=n>key</span> <span class=o>=</span> <span class=p>[</span> <span class=mh>0x33</span><span class=p>,</span> <span class=mh>0x31</span><span class=p>,</span> <span class=mh>0x31</span><span class=p>,</span> <span class=mh>0x37</span> <span class=p>]</span>
+</span></span><span class=line><span class=cl>    <span class=n>lines</span> <span class=o>=</span> <span class=kc>None</span>
+</span></span><span class=line><span class=cl>    <span class=n>outputs</span> <span class=o>=</span> <span class=p>[]</span>
+</span></span><span class=line><span class=cl>    <span class=n>flag</span> <span class=o>=</span> <span class=s2>&#34;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=k>with</span> <span class=nb>open</span><span class=p>(</span><span class=s2>&#34;out.txt&#34;</span><span class=p>)</span> <span class=k>as</span> <span class=n>f</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>lines</span> <span class=o>=</span> <span class=n>f</span><span class=o>.</span><span class=n>readlines</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>line</span> <span class=ow>in</span> <span class=n>lines</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>outputs</span><span class=o>.</span><span class=n>append</span><span class=p>([</span><span class=nb>int</span><span class=p>(</span><span class=n>x</span><span class=p>)</span> <span class=k>for</span> <span class=n>x</span> <span class=ow>in</span> <span class=n>line</span><span class=o>.</span><span class=n>strip</span><span class=p>()</span><span class=o>.</span><span class=n>split</span><span class=p>(</span><span class=s2>&#34; &#34;</span><span class=p>)])</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=n>i</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span> <span class=nb>len</span><span class=p>(</span><span class=n>outputs</span><span class=p>)</span> <span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=n>d1</span> <span class=o>=</span> <span class=n>encoder_4x16</span><span class=p>(</span> <span class=n>outputs</span><span class=p>[</span><span class=n>i</span><span class=p>][</span><span class=mi>0</span><span class=p>]</span> <span class=o>^</span> <span class=p>(</span><span class=n>key</span><span class=p>[</span><span class=n>i</span> <span class=o>%</span> <span class=mi>4</span><span class=p>]</span> <span class=p>))</span>
+</span></span><span class=line><span class=cl>        <span class=n>d2</span> <span class=o>=</span> <span class=n>encoder_4x16</span><span class=p>(</span> <span class=n>outputs</span><span class=p>[</span><span class=n>i</span><span class=p>][</span><span class=mi>1</span><span class=p>]</span> <span class=o>^</span> <span class=p>(</span><span class=n>key</span><span class=p>[</span><span class=n>i</span> <span class=o>%</span> <span class=mi>4</span><span class=p>]</span> <span class=p>))</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=n>c</span> <span class=o>=</span> <span class=p>(</span><span class=n>d1</span> <span class=o>&lt;&lt;</span> <span class=mi>4</span><span class=p>)</span> <span class=o>|</span> <span class=n>d2</span>
+</span></span><span class=line><span class=cl>        <span class=n>flag</span> <span class=o>+=</span> <span class=nb>chr</span><span class=p>(</span><span class=n>c</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=nb>print</span><span class=p>(</span><span class=n>flag</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>reverse_process</span><span class=p>()</span>
+</span></span></code></pre></td></tr></table></div></div><p>The flag is: <code>HTB{I_L0v3_VHDL_but_LOve_my_5w33thear7_m0re}</code>.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/hardware/>Hardware</a>
+<a href=/tags/htb/>Htb</a>
+<a href=/tags/easy/>Easy</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/bare-metal/><div class=article-image><img src=/p/bare-metal/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB HW Challenge: Bare Metal" data-key=bare-metal data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB HW Challenge: Bare Metal</h2></div></a></article><article class=has-image><a href=/p/htb-hw-challenge-rflag/><div class=article-image><img src=/p/htb-hw-challenge-rflag/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB HW Challenge RFlag" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB HW Challenge RFlag</h2></div></a></article><article class=has-image><a href=/p/when-leetcode-meets-hacking/><div class=article-image><img src=/p/when-leetcode-meets-hacking/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post When Leetcode Meets Hacking" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>When Leetcode Meets Hacking</h2></div></a></article><article class=has-image><a href=/p/htb-hw-challenge-trace/><div class=article-image><img src=/p/htb-hw-challenge-trace/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB HW Challenge Trace" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB HW Challenge Trace</h2></div></a></article><article class=has-image><a href=/p/kernel-adventures-part-ii/><div class=article-image><img src=https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg loading=lazy data-key data-hash=https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg></div><div class=article-details><h2 class=article-title>Kernel Adventures Part II</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//https-kvn11-github-io.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2024 Kvn11</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.26.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

